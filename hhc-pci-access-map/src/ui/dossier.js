@@ -13,7 +13,7 @@
 
 import { REGIONS, HOSPITAL_COLORS, HOSPITALS, PLACEMENT_DATA } from '../data/data-index.js';
 import { STEMI_RATE, STEMI_NOTE, REGION_CAPITAL } from '../engine/assumptions.js';
-import { fragilitySeverity }        from '../engine/fragility.js';
+
 import { getCatchmentForHospital }  from '../engine/catchments.js';
 import {
   buildAffectedByGovernorate,
@@ -134,7 +134,15 @@ export function openRegionDossier(regionId, geojson) {
     }
   }
 
-  const frag = fragilitySeverity(zx.pct_pop, totalPrioScore);
+  // Region-level severity: derived from Zone X population share, not backup hospital distance.
+  // fragilitySeverity() is for per-site redundancy minutes; here we use a pct_pop ladder instead.
+  const frag = zx.pct_pop >= 0.5
+    ? { label: 'Critical', color: '#e03e3e' }
+    : zx.pct_pop >= 0.3
+    ? { label: 'High',     color: '#ff8c42' }
+    : zx.pct_pop >= 0.1
+    ? { label: 'Moderate', color: '#f5d033' }
+    : { label: 'Low',      color: '#7ed957' };
 
   setBadge('REG', C_Z1);
   openDossierPanel(

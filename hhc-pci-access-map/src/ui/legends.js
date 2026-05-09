@@ -143,32 +143,39 @@ export function renderPlacementLegend(containerId) {
 }
 
 /**
- * Render the layer-toggle panel (checkbox rows) into a container.
- * This is a simplified variant of renderLayersSection that uses real
- * &lt;input type="checkbox"&gt; elements — wired by main.js with change listeners.
+ * Render the data-layers toggle panel using pill-style toggles.
+ * Layers that start ON are rendered with the .on class on the pill.
+ * main.js wires click listeners and updates pill state on toggle.
  *
  * @param {string} containerId
+ * @param {{ haras: boolean, hospitals: boolean, towers: boolean, arcs: boolean }} [initialState]
  */
-export function renderTogglePanel(containerId) {
+export function renderTogglePanel(containerId, initialState = { haras: true, hospitals: true, towers: false, arcs: false }) {
   const el = document.getElementById(containerId);
   if (!el) return;
 
   const layers = [
-    { id: 'haras',     label: 'Neighborhood Boundaries', color: 'var(--z1)'   },
-    { id: 'hospitals', label: 'PCI Hospitals',            color: 'var(--hosp)' },
-    { id: 'towers',    label: 'Unreachable Population',   color: 'var(--zx)'   },
-    { id: 'arcs',      label: 'Access Corridors',         color: 'var(--zx)', countId: 'arc-count' },
+    { id: 'haras',     label: 'Neighborhood Boundaries', count: '21,943', color: 'var(--z1)'   },
+    { id: 'hospitals', label: 'PCI Hospitals',            count: '26',     color: 'var(--hosp)' },
+    { id: 'towers',    label: 'Unreachable Population',   count: 'Zone X', color: 'var(--zx)'   },
+    { id: 'arcs',      label: 'Access Corridors',         count: null,     color: 'var(--zx)', countId: 'arc-count' },
   ];
 
   el.innerHTML = `
     <div class="panel-label">Data Layers</div>
-    ${layers.map((l) => `
-      <label class="toggle-row">
-        <input type="checkbox" id="toggle-${l.id}" class="sr-only">
-        <div class="toggle-dot" style="background:${l.color}"></div>
-        <span class="toggle-label">${l.label}</span>
-        ${l.countId ? `<span class="toggle-count" id="${l.countId}">—</span>` : ''}
-      </label>
-    `).join('')}
+    ${layers.map((l) => {
+      const on = initialState[l.id] ?? false;
+      const countHTML = l.countId
+        ? `<span class="toggle-count" id="${l.countId}">Zone X</span>`
+        : `<span class="toggle-count">${l.count}</span>`;
+      return `
+        <div class="toggle-row" data-layer="${l.id}" role="button" tabindex="0" aria-pressed="${on}">
+          <div class="toggle-pill${on ? ' on' : ''}" id="toggle-${l.id}"><div class="toggle-thumb"></div></div>
+          <div class="toggle-dot" style="background:${l.color}"></div>
+          <span class="toggle-label">${l.label}</span>
+          ${countHTML}
+        </div>
+      `;
+    }).join('')}
   `;
 }

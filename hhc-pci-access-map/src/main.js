@@ -74,23 +74,34 @@ map.on('load', async () => {
   // ── 4. Wire left-panel view-mode buttons ─────────────────────────────────
   renderViewModeSection('viewmode-section', 'zone', (mode) => setViewMode(mode));
 
-  // ── 5. Wire layer toggle checkboxes ──────────────────────────────────────
+  // ── 5. Render layer toggle panel into the correct container ──────────────
+  renderTogglePanel('layers-section', DEFAULT_LAYER_STATE);
+
+  // ── 6. Wire layer toggle rows (pill-style) ────────────────────────────────
   const toggleIds = ['haras', 'hospitals', 'towers', 'arcs'];
   toggleIds.forEach((id) => {
-    const el = document.getElementById(`toggle-${id}`);
-    if (!el) return;
-    el.checked = DEFAULT_LAYER_STATE[id] ?? true;
-    el.addEventListener('change', () => {
-      toggleLayer(id, el.checked, deckOverlay, arcData);
+    const row  = document.querySelector(`[data-layer="${id}"]`);
+    const pill = document.getElementById(`toggle-${id}`);
+    if (!row || !pill) return;
+
+    let on = DEFAULT_LAYER_STATE[id] ?? false;
+
+    const handleToggle = () => {
+      on = !on;
+      pill.classList.toggle('on', on);
+      row.setAttribute('aria-pressed', String(on));
+      toggleLayer(id, on, deckOverlay, arcData);
+    };
+
+    row.addEventListener('click', handleToggle);
+    row.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') handleToggle();
     });
   });
 
-  // ── 6. Wire zoom + dossier-close buttons ─────────────────────────────────
+  // ── 7. Wire zoom + dossier-close buttons ─────────────────────────────────
   wireZoomControls(map);
   wireDossierClose(() => closeDossier(map));
-
-  // ── 7. Render layer toggle panel ─────────────────────────────────────────
-  renderTogglePanel('toggle-panel');
 
   // ── 8. Enter default view mode ───────────────────────────────────────────
   setViewMode('zone');
