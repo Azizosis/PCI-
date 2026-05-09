@@ -437,3 +437,122 @@
   color: #fff;
   font-size: 11px;
 }
+
+/* ── Dossier zone bars ──────────────────────── */
+.dossier-zone-bars { display: flex; flex-direction: column; gap: 6px; }
+
+.dossier-zone-row {
+  display: grid;
+  grid-template-columns: 90px 1fr 36px auto auto;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+}
+
+.dossier-zone-label { color: var(--muted); font-size: 9px; }
+
+.dossier-zone-track {
+  height: 7px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.dossier-zone-fill { height: 100%; border-radius: 3px; }
+
+.dossier-zone-pct  { font-family: var(--font-mono); font-size: 10px; text-align: right; }
+.dossier-zone-pop  { color: var(--muted); font-size: 9px; white-space: nowrap; }
+.dossier-zone-stemi{ font-family: var(--font-mono); font-size: 9px; white-space: nowrap; }
+
+/* ── Dossier stat grid ──────────────────────── */
+.dossier-stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.dossier-stat { display: flex; flex-direction: column; gap: 2px; }
+
+.dossier-stat-value {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.dossier-stat-label { font-size: 9px; color: var(--muted); line-height: 1.3; }
+
+/* ── Dossier narrative ──────────────────────── */
+.dossier-narrative {
+  font-size: 11px;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+/* ── Dossier hospital list ──────────────────── */
+.dossier-hosp-list { display: flex; flex-direction: column; gap: 5px; }
+
+.dossier-hosp-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text);
+}
+
+.dossier-hosp-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dossier-hosp-name { flex: 1; }
+
+/* ── Dossier score bars ─────────────────────── */
+.dossier-score-bars { display: flex; flex-direction: column; gap: 5px; }
+
+.dossier-score-row {
+  display: grid;
+  grid-template-columns: 100px 1fr 32px 28px 28px;
+  align-items: center;
+  gap: 6px;
+  font-size: 9px;
+}
+
+.dossier-score-label  { color: var(--muted); }
+.dossier-score-track  { height: 5px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.dossier-score-fill   { height: 100%; border-radius: 2px; }
+.dossier-score-pct    { font-family: var(--font-mono); text-align: right; }
+.dossier-score-weight { color: var(--muted); text-align: right; }
+.dossier-score-contrib{ font-family: var(--font-mono); text-align: right; font-weight: 700; }
+
+/* ── Dossier governorate list ───────────────── */
+.dossier-gov-list { display: flex; flex-direction: column; gap: 4px; }
+
+.dossier-gov-item {
+  display: grid;
+  grid-template-columns: 1fr 40px 40px 40px;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.dossier-gov-name { color: var(--text); }
+.dossier-gov-z1   { font-family: var(--font-mono); text-align: right; }
+.dossier-gov-z2   { font-family: var(--font-mono); text-align: right; }
+.dossier-gov-tot  { font-family: var(--font-mono); text-align: right; color: var(--muted); }
+
+/* ── Dossier assumption footnote ────────────── */
+.dossier-assumption {
+  font-size: 8px;
+  color: var(--muted);
+  opacity: 0.65;
+  font-style: italic;
+  line-height: 1.5;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}

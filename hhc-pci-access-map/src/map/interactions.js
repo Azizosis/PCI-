@@ -17,6 +17,7 @@ import { siteShortName } from '../utils/format.js';
 
 /**
  * @typedef {{
+ *   REGIONS_LIST:        Array<{ id: string, name: string, lng: number, lat: number }>,
  *   getViewMode:         () => string,
  *   getSelectedSite:     () => number,
  *   getPlacementResult:  () => import('../engine/placement-engine.js').PlacementResult | null,
@@ -148,10 +149,12 @@ export function wireInteractions(map, deps) {
       return;
     }
 
-    const region = e.features[0].properties.Region;
-    // Fuzzy-match: exact, includes, or first word
-    const REGIONS = (await import('../data/data-index.js')).REGIONS;
-    const r = REGIONS.find(
+    const region  = e.features[0].properties.Region;
+    // Fuzzy-match: exact, includes, or first word.
+    // REGIONS_LIST is passed via deps to avoid a circular import and to
+    // eliminate the invalid `await import()` inside a synchronous handler.
+    const REGIONS_LIST = deps.REGIONS_LIST;
+    const r = REGIONS_LIST.find(
       (x) => x.name === region || x.name.includes(region) || region.includes(x.name.split(' ')[0])
     );
     if (r) {

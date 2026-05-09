@@ -81,3 +81,94 @@ export function renderZoneLegend(containerId) {
     </div>
   `;
 }
+
+/**
+ * Render the catchment mode legend.
+ *
+ * @param {string} containerId
+ */
+export function renderCatchmentLegend(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+
+  el.innerHTML = `
+    <div class="panel-label">Hospital Catchments</div>
+    <div class="zone-legend">
+      <div class="zone-legend-row">
+        <div class="zone-swatch" style="background:var(--hosp)"></div>
+        <span class="zone-legend-label">Colour</span>
+        <span class="zone-legend-desc">per nearest PCI hospital</span>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Render the priority mode legend.
+ *
+ * @param {string} containerId
+ */
+export function renderPriorityLegend(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+
+  el.innerHTML = `
+    <div class="panel-label">Access Burden (person-hrs)</div>
+    <div class="zone-legend">
+      <div class="zone-legend-row"><div class="zone-swatch" style="background:#3a5a90"></div><span class="zone-legend-desc">Low (&lt;500)</span></div>
+      <div class="zone-legend-row"><div class="zone-swatch" style="background:#d4a017"></div><span class="zone-legend-desc">Medium (500-5K)</span></div>
+      <div class="zone-legend-row"><div class="zone-swatch" style="background:#ff6b3e"></div><span class="zone-legend-desc">High (5K-20K)</span></div>
+      <div class="zone-legend-row"><div class="zone-swatch" style="background:#ff1e3c"></div><span class="zone-legend-desc">Critical (&gt;20K)</span></div>
+    </div>
+  `;
+}
+
+/**
+ * Render the placement mode legend.
+ *
+ * @param {string} containerId
+ */
+export function renderPlacementLegend(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+
+  el.innerHTML = `
+    <div class="panel-label">Placement Analysis</div>
+    <div class="zone-legend">
+      <div class="zone-legend-row"><div class="zone-swatch" style="background:#00e5b4"></div><span class="zone-legend-desc">Rescued (Zone X → Zone 1/2)</span></div>
+      <div class="zone-legend-row"><div class="zone-swatch" style="background:#ff1e3c"></div><span class="zone-legend-desc">Still unreachable (Zone X)</span></div>
+      <div class="zone-legend-row"><div class="zone-swatch" style="background:#9d4edd"></div><span class="zone-legend-desc">Proposed site marker</span></div>
+    </div>
+  `;
+}
+
+/**
+ * Render the layer-toggle panel (checkbox rows) into a container.
+ * This is a simplified variant of renderLayersSection that uses real
+ * &lt;input type="checkbox"&gt; elements — wired by main.js with change listeners.
+ *
+ * @param {string} containerId
+ */
+export function renderTogglePanel(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+
+  const layers = [
+    { id: 'haras',     label: 'Neighborhood Boundaries', color: 'var(--z1)'   },
+    { id: 'hospitals', label: 'PCI Hospitals',            color: 'var(--hosp)' },
+    { id: 'towers',    label: 'Unreachable Population',   color: 'var(--zx)'   },
+    { id: 'arcs',      label: 'Access Corridors',         color: 'var(--zx)', countId: 'arc-count' },
+  ];
+
+  el.innerHTML = `
+    <div class="panel-label">Data Layers</div>
+    ${layers.map((l) => `
+      <label class="toggle-row">
+        <input type="checkbox" id="toggle-${l.id}" class="sr-only">
+        <div class="toggle-dot" style="background:${l.color}"></div>
+        <span class="toggle-label">${l.label}</span>
+        ${l.countId ? `<span class="toggle-count" id="${l.countId}">—</span>` : ''}
+      </label>
+    `).join('')}
+  `;
+}
