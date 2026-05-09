@@ -40,6 +40,7 @@ import { openRegionDossier, openCatchmentDossier,
 
 import { flyToRegion, flyToHospital,
          flyToSite, resetCamera }            from './map/camera.js';
+import { setLayerVisibility }               from './map/layers.js';
 
 // ── Private state ─────────────────────────────────────────────────────────────
 let _map             = null;   // maplibregl.Map — set once by init()
@@ -114,6 +115,39 @@ export function openDossier(regionId) {
 }
 
 /**
+ * Compute catchment statistics for a hospital without touching the map or DOM.
+ * This is the pure business-logic function referenced by interactions.js via
+ * deps.computeHospitalStats() — it must never import from map or UI modules.
+ *
+ * @param {string} hospName
+ * @returns {{ haras: number, pop: number }}
+ */
+export function computeHospitalStats(hospName) {
+  const stats = { haras: 0, pop: 0 };
+  // _geoWork is the current working copy of the GeoJSON — it accurately
+  // reflects any annotations already applied by the current view mode.
+  const features = _geoWork ? _geoWork.features : [];
+  for (const f of features) {
+    if (f.properties.Nearest_Hospital === hospName) {
+      stats.haras++;
+      stats.pop += +(f.properties.POPULATION || 0);
+    }
+  }
+  return stats;
+}
+
+/**
+ * Fly to a hospital by name (pure camera call, no dossier side-effects).
+ * Called from interactions.js deps after the catchment dossier is opened.
+ *
+ * @param {string} hospName
+ */
+export function flyToHospitalByName(hospName) {
+  const hosp = HOSPITALS.find((h) => h.name === hospName);
+  if (hosp && _map) flyToHospital(_map, hosp.lng, hosp.lat);
+}
+
+/**
  * Open the catchment dossier for a hospital.
  *
  * @param {string} hospName
@@ -184,11 +218,10 @@ export function showHarasPlacementReverse(props, _lngLat) {
  */
 export function toggleLayer(id, visible, deckOverlay, arcData) {
   _layerState[id] = visible;
-  const { setLayerVisibility } = /** @type {any} */ (window.__layers__);
   setLayerVisibility(_map, id, visible, deckOverlay, arcData, _layerState);
 }
 
-// ── Private transition helpers ────────────────────────────────────────────────
+// ── Private transition helpers ──────────────────────────────────────────���─────
 function _enterZone() {
   _geoWork = cloneGeojson();
   resetCamera(_map);

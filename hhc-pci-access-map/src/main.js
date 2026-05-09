@@ -11,11 +11,9 @@
  */
 
 import { HARAS_GEOJSON, HOSPITALS }           from './data/data-index.js';
-import { HOSPITAL_COLORS, HARA_GOV, HARA_AUX,
-         HARAS_TO_BEST_CANDIDATE }             from './data/data-index.js';
 
 import { initMap }                             from './map/map-init.js';
-import { addAllLayers, setLayerVisibility }    from './map/layers.js';
+import { addAllLayers }                        from './map/layers.js';
 import { wireInteractions }                    from './map/interactions.js';
 
 import { renderViewModeSection,
@@ -35,6 +33,8 @@ import {
   openPlacementDossier,
   showHarasPlacementReverse,
   toggleLayer,
+  computeHospitalStats,
+  flyToHospitalByName,
 }                                              from './state.js';
 import { closeDossier }                        from './ui/dossier.js';
 import { DEFAULT_LAYER_STATE }                 from './config.js';
@@ -47,14 +47,14 @@ map.on('load', async () => {
   // ── 1. Add all map layers ────────────────────────────────────────────────
   const { deckOverlay, arcData } = addAllLayers(map, HARAS_GEOJSON, HOSPITALS);
 
-  // Expose layers module seam for state.js toggleLayer()
-  window.__layers__ = { setLayerVisibility };
+  // Update arc-count badge here (layers.js is DOM-free)
+  const arcCountEl = document.getElementById('arc-count');
+  if (arcCountEl) arcCountEl.textContent = arcData.length.toLocaleString();
 
   // ── 2. Bind state module to map ──────────────────────────────────────────
   initState(map);
 
   // ── 3. Wire map interactions ─────────────────────────────────────────────
-  // REGIONS is a static export — import it at the top level
   const { REGIONS } = await import('./data/data-index.js');
 
   wireInteractions(map, {
@@ -67,6 +67,8 @@ map.on('load', async () => {
     openPlacementDossier,
     setViewMode,
     showHarasPlacementReverse,
+    computeHospitalStats,
+    flyToHospital:          flyToHospitalByName,
   });
 
   // ── 4. Wire left-panel view-mode buttons ─────────────────────────────────

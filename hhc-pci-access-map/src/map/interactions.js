@@ -8,9 +8,7 @@
  * the clean module-scoped flag from utils/events.js.
  */
 
-import { HARA_AUX, HARAS_TO_BEST_CANDIDATE, HARAS_GEOJSON, HOSPITALS } from '../data/data-index.js';
-import { HOSPITAL_COLORS } from '../data/data-index.js';
-import { PLACEMENT_DATA }  from '../data/data-index.js';
+import { HARA_INDEX, HOSPITAL_COLORS, PLACEMENT_DATA } from '../data/data-index.js';
 import { markHandled, wasHandled, clearHandled } from '../utils/events.js';
 import { flyToRegion, flyToHospital, flyToSite } from './camera.js';
 import { siteShortName } from '../utils/format.js';
@@ -26,6 +24,7 @@ import { siteShortName } from '../utils/format.js';
  *   openPlacementDossier:(siteIdx: number) => void,
  *   setViewMode:         (mode: string) => void,
  *   showHarasPlacementReverse: (props: object, lngLat: maplibregl.LngLat) => void,
+ *   computeHospitalStats:(hospName: string) => { haras: number, pop: number },
  * }} InteractionDeps
  */
 
@@ -44,7 +43,7 @@ export function wireInteractions(map, deps) {
     map.getCanvas().style.cursor = 'pointer';
     const p         = e.features[0].properties;
     const zoneColor = p.Zone === 'Zone 1' ? '#00e5b4' : p.Zone === 'Zone 2' ? '#d4a017' : '#e03e3e';
-    const aux       = HARA_AUX.get(+p.HARA_ID);
+    const aux       = HARA_INDEX.get(+p.HARA_ID);
 
     const detour = (aux && aux.dist > 0 && aux.hav > 0)
       ? `<div style="margin-top:3px;font-size:9px;color:#6a8090">Route ${aux.dist.toFixed(0)}km · direct ${aux.hav.toFixed(0)}km · <span style="color:${(aux.dist / aux.hav) >= 1.5 ? '#e85d3e' : '#6a8090'}">${(aux.dist / aux.hav).toFixed(2)}x detour</span></div>`
@@ -123,19 +122,14 @@ export function wireInteractions(map, deps) {
     const hospName = e.features[0].properties.name;
     const col      = HOSPITAL_COLORS[hospName] || '#0077ff';
 
-    const stats = { haras: 0, pop: 0 };
-    for (const f of HARAS_GEOJSON.features) {
-      if (f.properties.Nearest_Hospital === hospName) {
-        stats.haras++;
-        stats.pop += (f.properties.POPULATION || 0);
-      }
-    }
+    // Business logic (iterating GeoJSON features) belongs in state.js.
+    // deps.computeHospitalStats() is a pure function that returns { haras, pop }
+    // without touching the map or DOM.
+    const stats = deps.computeHospitalStats(hospName);
 
     deps.setViewMode('catchment');
     deps.openCatchmentDossier(hospName, stats, col);
-
-    const hosp = HOSPITALS.find((h) => h.name === hospName);
-    if (hosp) flyToHospital(map, hosp.lng, hosp.lat);
+    deps.flyToHospital(hospName);
   });
 
   // ── Haras click ─────────────────────────────────────────────────────────────
