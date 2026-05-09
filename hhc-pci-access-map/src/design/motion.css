@@ -1,0 +1,38 @@
+/* ============================================================
+   Motion — animations and reduced-motion overrides
+   ============================================================ */
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--z1);
+  box-shadow: 0 0 8px var(--z1);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* ── Reduced-motion overrides ─────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .status-dot {
+    animation: none;
+    opacity: 1;
+  }
+
+  .dossier {
+    transition: none;
+  }
+
+  .toggle-pill,
+  .toggle-thumb,
+  .viewmode-btn,
+  .cluster-item,
+  .dossier-close,
+  .zoom-btn {
+    transition: none;
+  }
+}

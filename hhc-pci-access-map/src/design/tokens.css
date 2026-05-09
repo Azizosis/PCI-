@@ -1,0 +1,32 @@
+/* ============================================================
+   Design tokens — single source of truth for all colors,
+   spacing, and typography used in the application.
+   ============================================================ */
+
+:root {
+  /* ── Color palette ── */
+  --bg:       #080c10;
+  --surface:  #0d1318;
+  --border:   #1c2a35;
+
+  /* Zone classification */
+  --z1:  #00e5b4;   /* Zone 1  — ≤60 min drive  */
+  --z2:  #d4a017;   /* Zone 2  — 60–120 min      */
+  --zx:  #e03e3e;   /* Zone X  — >120 min        */
+
+  /* Hospital / overlay */
+  --hosp: #0077ff;
+
+  /* Text scale */
+  --text:  #c8d8e4;
+  --muted: #4a6070;
+
+  /* Fonts */
+  --font-mono: 'Space Mono', monospace;
+  --font-sans: 'DM Sans', sans-serif;
+
+  /* ── Layout dimensions ── */
+  --panel-w:   280px;
+  --dossier-w: 400px;
+  --header-h:  48px;
+}

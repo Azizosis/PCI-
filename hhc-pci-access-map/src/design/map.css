@@ -1,0 +1,16 @@
+/* ============================================================
+   Map-specific overrides — MapLibre popup + attribution controls
+   ============================================================ */
+
+/* Hide default MapLibre attribution buttons */
+.maplibregl-ctrl-bottom-right,
+.maplibregl-ctrl-bottom-left { display: none; }
+
+/* Neighborhood hover popup */
+.nbhd-popup .maplibregl-popup-content {
+  background: #0d1318 !important;
+  border: 1px solid #1c2a35 !important;
+  border-radius: 6px !important;
+  padding: 10px 14px !important;
+  min-width: 200px !important;
+}

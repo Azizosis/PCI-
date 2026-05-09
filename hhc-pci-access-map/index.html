@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HHC — PCI Access Intelligence</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+  <!-- MapLibre GL -->
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+  <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet">
+
+  <!-- deck.gl -->
+  <script src="https://unpkg.com/deck.gl@9.0.30/dist.min.js"></script>
+
+  <!-- Design system -->
+  <link rel="stylesheet" href="src/design/tokens.css">
+  <link rel="stylesheet" href="src/design/layout.css">
+  <link rel="stylesheet" href="src/design/panels.css">
+  <link rel="stylesheet" href="src/design/map.css">
+  <link rel="stylesheet" href="src/design/motion.css">
+</head>
+<body>
+
+  <!-- ─── Header ─────────────────────────────────────────────── -->
+  <header class="app-header">
+    <span class="header-logo">HHC // GeoINT</span>
+    <div class="header-sep"></div>
+    <span class="header-title">PCI Access Intelligence — 13 KSA Regions · 21,943 Neighborhood Boundaries</span>
+    <div class="header-right">
+      <div class="status-dot"></div>
+      <span class="status-text">APR 2026 · GDB 2023</span>
+    </div>
+  </header>
+
+  <!-- ─── Main canvas ─────────────────────────────────────────── -->
+  <main class="main-canvas">
+    <div id="map"></div>
+
+    <!-- Left panel -->
+    <aside class="left-panel" id="left-panel">
+      <!-- Data layers section -->
+      <section class="panel-section" id="layers-section"></section>
+
+      <!-- Zone legend section -->
+      <section class="panel-section" id="legend-section"></section>
+
+      <!-- View mode buttons -->
+      <section class="panel-section panel-section--compact" id="viewmode-section"></section>
+
+      <!-- List label + scrollable list -->
+      <div class="list-label" id="list-label">Regions — % Pop in Zone 1</div>
+      <div class="cluster-list" id="cluster-list"></div>
+    </aside>
+
+    <!-- Right dossier panel -->
+    <aside class="dossier" id="dossier">
+      <div class="dossier-header" id="dossier-header">
+        <div class="dossier-badge" id="dossier-badge">—</div>
+        <div class="dossier-title">
+          <div class="dossier-name" id="dossier-name">—</div>
+          <div class="dossier-meta" id="dossier-meta">—</div>
+        </div>
+        <button class="dossier-close" id="dossier-close" aria-label="Close dossier">
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+            <path d="M1 1l8 8M9 1l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+      <div class="dossier-body" id="dossier-body">
+        <div class="alert-box" id="alert-box">
+          <div class="alert-title" id="alert-title">Critical Access Gap</div>
+          <div class="alert-text" id="alert-text"></div>
+        </div>
+        <div class="stats-grid" id="stats-grid"></div>
+        <div class="zone-breakdown" id="zone-breakdown"></div>
+        <div id="hosp-section">
+          <div class="list-label" style="padding:0;margin-bottom:8px">PCI Hospitals Serving Region</div>
+          <table class="hosp-table">
+            <thead><tr><th>Hospital</th><th style="text-align:right">Coords</th></tr></thead>
+            <tbody id="hosp-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Map controls -->
+    <div class="zoom-controls" id="zoom-controls">
+      <button class="zoom-btn" id="btn-zoom-in" aria-label="Zoom in">+</button>
+      <button class="zoom-btn" id="btn-zoom-out" aria-label="Zoom out">−</button>
+    </div>
+
+    <!-- Coordinate readout -->
+    <div class="coord-readout" id="coord-readout" aria-live="polite">24.7408° N &nbsp; 46.6773° E</div>
+  </main>
+
+  <!-- ─── Application modules ──────────────────────────────────── -->
+  <script type="module" src="src/app/main.js"></script>
+</body>
+</html>
