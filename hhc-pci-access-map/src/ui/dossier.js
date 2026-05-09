@@ -11,9 +11,7 @@
  * The dossier element is assumed to exist in index.html.
  */
 
-import { REGIONS, HARAS_GEOJSON, HOSPITAL_COLORS, HOSPITALS }  from '../data/data-index.js';
-import { HARA_GOV }                 from '../data/data-index.js';
-import { PLACEMENT_DATA }           from '../data/data-index.js';
+import { REGIONS, HOSPITAL_COLORS, HOSPITALS, PLACEMENT_DATA } from '../data/data-index.js';
 import { STEMI_RATE, STEMI_NOTE, REGION_CAPITAL } from '../engine/assumptions.js';
 import { fragilitySeverity }        from '../engine/fragility.js';
 import { getCatchmentForHospital }  from '../engine/catchments.js';
@@ -54,9 +52,9 @@ export function closeDossier(map = null) {
  * Render and open the region-level analytical dossier.
  *
  * @param {string} regionId
- * @param {GeoJSON.FeatureCollection} [geojson]  defaults to HARAS_GEOJSON
+ * @param {GeoJSON.FeatureCollection} geojson  — working copy passed by state.js
  */
-export function openRegionDossier(regionId, geojson = HARAS_GEOJSON) {
+export function openRegionDossier(regionId, geojson) {
   const region = REGIONS.find((r) => r.id === regionId);
   if (!region) return;
 
@@ -160,7 +158,7 @@ export function openRegionDossier(regionId, geojson = HARAS_GEOJSON) {
  * @param {string} color
  * @param {GeoJSON.FeatureCollection} [geojson]
  */
-export function openCatchmentDossier(hospName, basicStats, color, geojson = HARAS_GEOJSON) {
+export function openCatchmentDossier(hospName, basicStats, color, geojson) {
   const full = getCatchmentForHospital(geojson, hospName);
   const s    = full ?? { haras: basicStats.haras, pop: basicStats.pop, z1: { h: 0, p: 0 }, z2: { h: 0, p: 0 }, zx: { h: 0, p: 0 } };
 
@@ -228,12 +226,12 @@ export function openCatchmentDossier(hospName, basicStats, color, geojson = HARA
 // ── Placement site dossier ─────────────────────────────────────────────────────
 /**
  * Render and open the dossier for a proposed placement site.
+ * Governorate lookup uses HARA_INDEX internally — no GeoJSON needed here.
  *
  * @param {import('../engine/placement-engine.js').PlacementResult} result
  * @param {number} siteIndex  0-indexed rank in result.ranking
- * @param {GeoJSON.FeatureCollection} [geojson]
  */
-export function openSiteDossier(result, siteIndex, geojson = HARAS_GEOJSON) {
+export function openSiteDossier(result, siteIndex) {
   const r    = result.ranking[siteIndex];
   const cls  = r.classification;
   const site = r.site;
@@ -241,7 +239,7 @@ export function openSiteDossier(result, siteIndex, geojson = HARAS_GEOJSON) {
 
   const popReached = r.popZ1 + r.popZ2;
   const stemiYr    = Math.round(popReached * STEMI_RATE);
-  const govData    = buildAffectedByGovernorate(siteIndex, result, HARA_GOV);
+  const govData    = buildAffectedByGovernorate(siteIndex, result);
   const typeText   = facilityTypeText(cls);
 
   getTitle().textContent    = name;

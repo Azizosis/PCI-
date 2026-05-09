@@ -39,11 +39,6 @@ import {
 import { closeDossier }                        from './ui/dossier.js';
 import { DEFAULT_LAYER_STATE }                 from './config.js';
 
-// ── Expose data lookups on window for state.js helpers ────────────────────────
-// state.js uses window.__DATA_INDEX__ / window.__layers__ as lightweight
-// dependency-injection seams to avoid circular imports.
-window.__DATA_INDEX__ = { HOSPITAL_COLORS, HARA_GOV, HARA_AUX, HARAS_TO_BEST_CANDIDATE };
-
 // ── Initialise map ────────────────────────────────────────────────────────────
 const map = initMap('map');
 

@@ -12,7 +12,7 @@
 import {
   HARAS_GEOJSON,
   HARA_AUX_IDS, HARA_AUX_DIST, HARA_AUX_HAV, HARA_AUX_D2, HARA_AUX_D3,
-  HARA_GOV_IDS, HARA_GOV_IDX, HARA_GOV_TABLE,
+  HARA_GOV_IDX, HARA_GOV_TABLE,   // positionally aligned to HARA_AUX_IDS; HARA_GOV_IDS removed
 } from './haras.geojson.js';
 
 import { HOSPITALS, HOSPITAL_COLORS, CATCHMENT_MATCH } from './hospitals.js';
@@ -35,37 +35,46 @@ export const REGIONS = [
   { id: 'TABUK',      name: 'Tabuk',              lat: 26.950, lng: 36.766, z1: { nbhd: 22,   pop: 21493,   pct_pop: 0.074, avg: 32.0 }, z2: { nbhd: 37,   pop: 7875,    pct_pop: 0.027, avg: 90.7  }, zx: { nbhd: 368,  pop: 259738,  pct_pop: 0.898, avg: 191.3 }, total: { nbhd: 427,   pop: 289106   }, hospitals: ['King Fahad Hospital Tabuk', 'Madinah Cardiac Center'] },
 ];
 
-// ─── Canonical governorate name map ──────────────────────────────────────────
+// ─── Canonical governorate name corrections ───────────────────────────────────
 const GOV_CANONICAL = {
   'Al Is': 'Al Ais',
 };
 
-// ─── HARA_AUX lookup: HARA_ID → { dist, hav, d2, d3 } ───────────────────────
-export const HARA_AUX = (() => {
-  const m = new Map();
-  for (let i = 0; i < HARA_AUX_IDS.length; i++) {
+// ─── HARA_INDEX — single canonical per-haras lookup (one Map, one pass) ───────
+// Replaces the former separate HARA_AUX and HARA_GOV Maps.
+// Shape: Map<HARA_ID: number, { dist, hav, d2, d3, gov: string }>
+export const HARA_INDEX = (() => {
+  const m   = new Map();
+  const len = HARA_AUX_IDS.length;
+  for (let i = 0; i < len; i++) {
+    const raw = HARA_GOV_TABLE[HARA_GOV_IDX[i]] ?? '—';
     m.set(HARA_AUX_IDS[i], {
       dist: HARA_AUX_DIST[i],
       hav:  HARA_AUX_HAV[i],
       d2:   HARA_AUX_D2[i],
       d3:   HARA_AUX_D3[i],
+      gov:  GOV_CANONICAL[raw] ?? raw,
     });
   }
   return m;
 })();
 
-// ─── HARA_GOV lookup: HARA_ID → canonicalised governorate name ───────────────
-export const HARA_GOV = (() => {
-  const m = new Map();
-  for (let i = 0; i < HARA_GOV_IDS.length; i++) {
-    const raw = HARA_GOV_TABLE[HARA_GOV_IDX[i]];
-    m.set(HARA_GOV_IDS[i], GOV_CANONICAL[raw] || raw);
-  }
-  return m;
-})();
+// ─── Backwards-compat aliases (zero-cost — same Map reference) ───────────────
 
-// ─── HARAS_TO_BEST_CANDIDATE: HARA_ID → best single candidate across all sites
-// Used for placement reverse-lookup ("what site best covers this red haras?")
+/** @type {Map<number, { dist: number, hav: number, d2: number, d3: number, gov: string }>} */
+export const HARA_AUX = HARA_INDEX;
+
+/** Thin wrapper so callers can do HARA_GOV.get(id) for the gov name only. */
+export const HARA_GOV = {
+  get:  (id) => HARA_INDEX.get(id)?.gov ?? '—',
+  has:  (id) => HARA_INDEX.has(id),
+  entries: function* () {
+    for (const [id, v] of HARA_INDEX) yield [id, v.gov];
+  },
+};
+
+// ─── HARAS_TO_BEST_CANDIDATE: HARA_ID → best single candidate ────────────────
+// Used by placement reverse-lookup; built once, never recomputed.
 export const HARAS_TO_BEST_CANDIDATE = (() => {
   const m = new Map();
   for (let i = 0; i < PLACEMENT_DATA.cov.length; i++) {
@@ -78,6 +87,24 @@ export const HARAS_TO_BEST_CANDIDATE = (() => {
   }
   return m;
 })();
+
+// ─── cloneGeojson() — deep clone for safe mutation ───────────────────────────
+/**
+ * Return a deep clone of HARAS_GEOJSON whose feature properties can be
+ * annotated (priority_score, rescued_by, site_focus, etc.) without touching
+ * the immutable source object.
+ *
+ * @returns {GeoJSON.FeatureCollection}
+ */
+export function cloneGeojson() {
+  return {
+    type:     HARAS_GEOJSON.type,
+    features: HARAS_GEOJSON.features.map((f) => ({
+      ...f,
+      properties: { ...f.properties },
+    })),
+  };
+}
 
 // ─── Re-export raw data and processed structures ──────────────────────────────
 export {

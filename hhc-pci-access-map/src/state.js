@@ -15,7 +15,12 @@
  * not imported by them — data flows downward only.
  */
 
-import { HARAS_GEOJSON, HOSPITALS, REGIONS } from './data/data-index.js';
+import {
+  HOSPITALS, REGIONS,
+  HARAS_TO_BEST_CANDIDATE,
+  CATCHMENT_MATCH,
+  cloneGeojson,
+} from './data/data-index.js';
 import { PLACEMENT_NUM_SITES, DEFAULT_LAYER_STATE } from './config.js';
 
 import { computePlacement, annotatePlacementOnFeatures,
@@ -105,7 +110,7 @@ export function openDossier(regionId) {
   _selectedRegion = regionId;
   const r = REGIONS.find((x) => x.id === regionId);
   if (r && _map) flyToRegion(_map, r.lng, r.lat);
-  openRegionDossier(regionId);
+  openRegionDossier(regionId, _geoWork);
 }
 
 /**
@@ -117,7 +122,7 @@ export function openDossier(regionId) {
  */
 export function openCatchmentDossierForHospital(hospName, stats, color) {
   _selectedHospital = hospName;
-  openCatchmentDossier(hospName, stats, color);
+  openCatchmentDossier(hospName, stats, color, _geoWork);
 }
 
 /**
@@ -128,10 +133,10 @@ export function openCatchmentDossierForHospital(hospName, stats, color) {
 export function openPlacementDossier(siteIdx) {
   if (!_placementResult) return;
 
-  // Clear previous site-focus annotations, then apply new ones
-  clearSiteFocusOnFeatures(HARAS_GEOJSON);
-  setSiteFocusOnFeatures(HARAS_GEOJSON, _placementResult, siteIdx);
-  _map.getSource('haras')?.setData(HARAS_GEOJSON);
+  // Clear previous site-focus annotations, then apply new ones — on the working copy
+  clearSiteFocusOnFeatures(_geoWork);
+  setSiteFocusOnFeatures(_geoWork, _placementResult, siteIdx);
+  _map.getSource('haras')?.setData(_geoWork);
 
   // Update fill expression for focus mode
   if (_map.getLayer('haras-fill')) {
@@ -158,12 +163,9 @@ export function showHarasPlacementReverse(props, _lngLat) {
   // No-op if no result yet or haras is already rescued
   if (!_placementResult) return;
 
-  // Delegate to openPlacementDossier for the best site covering this haras
-  const { HARAS_TO_BEST_CANDIDATE } = /** @type {any} */ (
-    // eslint-disable-next-line no-undef
-    window.__DATA_INDEX__
-  );
-  const best = HARAS_TO_BEST_CANDIDATE?.get(+props.HARA_ID);
+  // Delegate to openPlacementDossier for the best site covering this haras.
+  // HARAS_TO_BEST_CANDIDATE is a proper ES-module import — no window globals.
+  const best = HARAS_TO_BEST_CANDIDATE.get(+props.HARA_ID);
   if (!best) return;
 
   // Find the rank of this site in the placement ranking
@@ -188,19 +190,21 @@ export function toggleLayer(id, visible, deckOverlay, arcData) {
 
 // ── Private transition helpers ────────────────────────────────────────────────
 function _enterZone() {
+  _geoWork = cloneGeojson();
   resetCamera(_map);
   _clearPlacementMarkers();
   _setHarasFill(_zoneFill());
-  _map.getSource('haras')?.setData(HARAS_GEOJSON);
+  _map.getSource('haras')?.setData(_geoWork);
   buildZoneList((regionId) => openDossier(regionId));
   renderZoneLegend('map-legend');
 }
 
 function _enterCatchment() {
+  _geoWork = cloneGeojson();
   resetCamera(_map);
   _clearPlacementMarkers();
   _setHarasFill(_catchmentFill());
-  _map.getSource('haras')?.setData(HARAS_GEOJSON);
+  _map.getSource('haras')?.setData(_geoWork);
   buildCatchmentList((name, stats, col) => {
     const hosp = HOSPITALS.find((h) => h.name === name);
     if (hosp) flyToHospital(_map, hosp.lng, hosp.lat);
@@ -210,24 +214,27 @@ function _enterCatchment() {
 }
 
 function _enterPriority() {
+  _geoWork = cloneGeojson();
   resetCamera(_map);
   _clearPlacementMarkers();
-  // Compute priority_score on each feature and write it as a property
-  computePriority(HARAS_GEOJSON);
-  _map.getSource('haras')?.setData(HARAS_GEOJSON);
+  computePriority(_geoWork);           // writes priority_score onto the working copy
+  _map.getSource('haras')?.setData(_geoWork);
   _setHarasFill(_priorityFill());
   buildPriorityList((regionId) => openDossier(regionId));
   renderPriorityLegend('map-legend');
 }
 
 function _enterPlacement() {
-  // Lazily compute placement result
+  // Fresh working copy every time — rescued_by must be re-annotated from a
+  // clean baseline so re-entering placement always reflects current ranking.
+  _geoWork = cloneGeojson();
+
   if (!_placementResult) {
     _placementResult = computePlacement(PLACEMENT_NUM_SITES);
-    annotatePlacementOnFeatures(HARAS_GEOJSON, _placementResult);
   }
+  annotatePlacementOnFeatures(_geoWork, _placementResult);
 
-  _map.getSource('haras')?.setData(HARAS_GEOJSON);
+  _map.getSource('haras')?.setData(_geoWork);
   _setHarasFill(getPlacementFill(-1));
 
   // Remove old markers, add new ones
@@ -242,7 +249,7 @@ function _enterPlacement() {
 }
 
 function _clearSiteFocus() {
-  clearSiteFocusOnFeatures(HARAS_GEOJSON);
+  clearSiteFocusOnFeatures(_geoWork);
   if (_map.getLayer('haras-fill')) {
     _map.setPaintProperty('haras-fill', 'fill-color', getPlacementFill(-1));
   }
@@ -270,17 +277,9 @@ function _zoneFill() {
 }
 
 function _catchmentFill() {
-  // Build a match expression from HOSPITAL_COLORS
-  const { HOSPITAL_COLORS } = /** @type {any} */ (window.__DATA_INDEX__ ?? {});
-  const pairs = [];
-  if (HOSPITAL_COLORS) {
-    for (const [name, col] of Object.entries(HOSPITAL_COLORS)) {
-      pairs.push(name, col);
-    }
-  }
-  return pairs.length
-    ? ['match', ['get', 'Nearest_Hospital'], ...pairs, '#334']
-    : '#334';
+  // CATCHMENT_MATCH is a pre-built MapLibre 'match' expression exported from
+  // hospitals.js via data-index.js — no window globals needed.
+  return CATCHMENT_MATCH;
 }
 
 function _priorityFill() {

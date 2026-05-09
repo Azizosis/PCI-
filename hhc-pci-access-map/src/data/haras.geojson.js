@@ -17,8 +17,7 @@
  *   HARA_AUX_D3   — drive time (min) to 3rd-nearest PCI hospital
  *
  * Governorate auxiliary arrays:
- *   HARA_GOV_IDS  — HARA_ID values (same sequence as HARA_AUX_IDS)
- *   HARA_GOV_IDX  — index into HARA_GOV_TABLE for each haras
+ *   HARA_GOV_IDX  — index into HARA_GOV_TABLE for each haras (positionally aligned to HARA_AUX_IDS)
  *   HARA_GOV_TABLE — deduplicated governorate name strings
  */
 
@@ -35,7 +34,7 @@ export const HARA_AUX_HAV  = /* INSERT */ [];
 export const HARA_AUX_D2   = /* INSERT */ [];
 export const HARA_AUX_D3   = /* INSERT */ [];
 
-// ─── Governorate arrays ───────────────────────────────────────────────────────
-export const HARA_GOV_IDS   = /* INSERT */ [];
+// ─── Governorate parallel arrays (positionally aligned to HARA_AUX_IDS) ──────
+// HARA_GOV_IDS removed — HARA_AUX_IDS is the single canonical ID array.
 export const HARA_GOV_IDX   = /* INSERT */ [];
 export const HARA_GOV_TABLE = /* INSERT */ [];
