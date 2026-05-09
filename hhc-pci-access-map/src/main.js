@@ -11,6 +11,7 @@
  */
 
 import { HARAS_GEOJSON, HOSPITALS, dataReady } from './data/data-index.js';
+import { runSmokeTest }                        from './utils/smoke-test.js';
 
 import { initMap }                             from './map/map-init.js';
 import { addAllLayers }                        from './map/layers.js';
@@ -43,10 +44,37 @@ import { DEFAULT_LAYER_STATE }                 from './config.js';
 // ── Initialise map ────────────────────────────────────────────────────────────
 const map = initMap('map');
 
+// ── Overlay helpers ───────────────────────────────────────────────────────────
+function overlayError(message) {
+  const el  = document.getElementById('load-overlay');
+  const txt = document.getElementById('load-text');
+  const sub = document.getElementById('load-sub');
+  if (!el) return;
+  el.classList.add('error');
+  if (txt) txt.textContent = message;
+  if (sub) sub.textContent = 'Reload the page to try again.';
+}
+
+function overlayDismiss() {
+  const el = document.getElementById('load-overlay');
+  if (!el) return;
+  el.classList.add('fade-out');
+  el.addEventListener('transitionend', () => el.classList.add('hidden'), { once: true });
+}
+
 // ── Map load ──────────────────────────────────────────────────────────────────
 map.on('load', async () => {
   // ── 1. Wait for GeoJSON to arrive (fetch from static file, not JS parse) ──
-  await dataReady;
+  try {
+    await dataReady;
+  } catch (err) {
+    overlayError('Failed to load neighborhood data.');
+    console.error('[HHC-PCI] GeoJSON fetch failed:', err);
+    return;
+  }
+
+  // ── 1b. Smoke test — validates data integrity silently in console ────────
+  runSmokeTest();
 
   // ── 2. Add all map layers ────────────────────────────────────────────────
   const { deckOverlay, arcData } = addAllLayers(map, HARAS_GEOJSON, HOSPITALS);
@@ -112,6 +140,9 @@ map.on('load', async () => {
 
   // ── 8. Enter default view mode ───────────────────────────────────────────
   setViewMode('zone');
+
+  // ── 9. Dismiss loading overlay ───────────────────────────────────────────
+  overlayDismiss();
 });
 
 // ── Map error handler ─────────────────────────────────────────────────────────
