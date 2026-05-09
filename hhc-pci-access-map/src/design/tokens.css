@@ -1,0 +1,78 @@
+/* ============================================================
+   Design tokens — single source of truth for all colors,
+   spacing, and typography used in the application.
+   ============================================================ */
+
+:root {
+  /* ── Surface palette ── */
+  --bg:           #080c10;   /* page background                         */
+  --surface:      #0d1318;   /* panel / card background                 */
+  --surface-deep: #0a111a;   /* deeper background (impact SVG, popups)  */
+  --border:       #1c2a35;   /* dividers, subtle outlines               */
+
+  /* ── Zone classification ── */
+  --z1:  #00e5b4;   /* Zone 1 — ≤60-min drive (teal)           */
+  --z2:  #d4a017;   /* Zone 2 — 60–120-min (amber)             */
+  --zx:  #e03e3e;   /* Zone X — >120-min / unreachable (red)   */
+
+  /* ── Priority heat ramp (low → critical) ── */
+  --priority-low:      #1a2840;
+  --priority-moderate: #3a5a90;
+  --priority-elevated: #d4a017;  /* same as --z2 by design               */
+  --priority-high:     #ff6b3e;
+  --priority-critical: #ff1e3c;
+
+  /* ── Accent palette ── */
+  --accent-purple:   #9d4edd;  /* placement site / population rescued   */
+  --accent-orange:   #ff8c42;  /* STEMI volume / score component        */
+  --hosp:            #0077ff;  /* hospital markers                      */
+  --hosp-stroke:     #001f5c;  /* hospital marker stroke                */
+  --hosp-fallback:   #0077ff;  /* fallback when no HOSPITAL_COLORS entry */
+
+  /* ── Text scale ── */
+  --text:       #c8d8e4;  /* primary body text                       */
+  --text-bright:#ffffff;  /* headings, key values                    */
+  --muted:      #4a6070;  /* secondary / disabled text               */
+  --muted-mid:  #6a8090;  /* mid-range muted (popup details)         */
+
+  /* ── Impact SVG palette ── */
+  --impact-leader:  #2a4050;  /* leader-line strokes in impact map SVG  */
+  --impact-bg:      #0a111a;  /* SVG canvas background                  */
+
+  /* ── Backdrop blur (progressive enhancement) ── */
+  --panel-blur: blur(12px);  /* default — high-end devices             */
+
+  /* ── Fonts ── */
+  --font-mono: 'Space Mono', monospace;
+  --font-sans: 'DM Sans', sans-serif;
+
+  /* ── Layout dimensions ── */
+  --panel-w:   280px;
+  --dossier-w: 400px;
+  --header-h:  48px;
+}
+
+/* ── Device capability overrides ─────────────────────────────────────────── */
+
+/*
+ * Limit backdrop-filter on devices that explicitly opt in to reduced motion
+ * (often also lower-end hardware) or that lack GPU compositing support.
+ * We disable blur entirely rather than reducing it, because a partial blur
+ * at low GPU bandwidth causes more jank than none at all.
+ */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --panel-blur: none;
+  }
+}
+
+/*
+ * update() is a Level-5 Media Query that detects non-interactive or
+ * slow-refresh rendering contexts (e-ink, slow-CPU browsers).
+ * "none" → static print-like surface, "slow" → frame-rate-limited device.
+ */
+@media (update: slow), (update: none) {
+  :root {
+    --panel-blur: none;
+  }
+}
