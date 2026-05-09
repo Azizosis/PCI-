@@ -2,6 +2,10 @@
   "version": 2,
   "routes": [
     {
+      "src": "/",
+      "dest": "/hhc-pci-access-map/index.html"
+    },
+    {
       "src": "/(.*\\.js)",
       "headers": { "Content-Type": "text/javascript; charset=utf-8" },
       "dest": "/hhc-pci-access-map/$1"
