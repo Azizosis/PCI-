@@ -22,7 +22,7 @@ import {
   PLACEMENT_DATA,
   cloneGeojson,
 } from './data/data-index.js';
-import { PLACEMENT_NUM_SITES, DEFAULT_LAYER_STATE } from './config.js';
+import { PLACEMENT_NUM_SITES, DEFAULT_VISIBLE_PLACEMENTS, DEFAULT_LAYER_STATE } from './config.js';
 
 import { computePlacement, annotatePlacementOnFeatures,
          setSiteFocusOnFeatures, clearSiteFocusOnFeatures,
@@ -354,14 +354,14 @@ function _enterPlacement() {
   _map.getSource('haras')?.setData(_geoWork);
   _setHarasFill(getPlacementFill(-1));
 
-  // Remove old markers, add new ones
+  // Remove old markers, add new ones — show only DEFAULT_VISIBLE_PLACEMENTS on map
   _clearPlacementMarkers();
   _placementMarkers = showPlacementMarkers(_map, _placementResult, (i) => {
     openPlacementDossier(i);
-  });
+  }, DEFAULT_VISIBLE_PLACEMENTS);
 
-  buildPlacementList(_placementResult, (i) => openPlacementDossier(i));
-  renderMarginalCurve(_placementResult.ranking);
+  buildPlacementList(_placementResult, (i) => openPlacementDossier(i), DEFAULT_VISIBLE_PLACEMENTS);
+  renderMarginalCurve(_placementResult.ranking, DEFAULT_VISIBLE_PLACEMENTS);
   renderPlacementLegend('legend-section');
 }
 

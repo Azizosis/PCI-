@@ -8,7 +8,7 @@
 
 import { REGIONS, HOSPITAL_COLORS, PLACEMENT_DATA } from '../data/data-index.js';
 import { z1Color } from '../engine/zones.js';
-import { siteShortName, shortHospName, fmtK } from '../utils/format.js';
+import { siteShortName, siteDisplayLabel, shortHospName, fmtK } from '../utils/format.js';
 import { STEMI_RATE, STEMI_NOTE } from '../engine/assumptions.js';
 
 // ── Zone mode ──────────────────────────────────────────────────────────────────
@@ -104,47 +104,49 @@ export function buildPriorityList(geojson, onRegionClick) {
 /**
  * @param {import('../engine/placement-engine.js').PlacementResult} result
  * @param {(siteIdx: number) => void} onSiteClick
+ * @param {number} [visibleCount=5]  How many ranked sites to show (top N)
  */
-export function buildPlacementList(result, onSiteClick) {
-  setLabel('Recommended PCI Sites — Pop Gaining Timely Access');
+export function buildPlacementList(result, onSiteClick, visibleCount = 5) {
+  setLabel('Recommended PCI Sites — Population Gaining Timely Access');
   const ranking  = result.ranking;
+  const visible  = ranking.slice(0, visibleCount);
   const list     = getList(); list.innerHTML = '';
 
-  const totalPop    = ranking.reduce((s, r) => s + r.popZ1 + r.popZ2, 0);
-  const totalHaras  = ranking.reduce((s, r) => s + r.harasCount, 0);
-  const pctCovered  = (100 * totalPop / PLACEMENT_DATA.meta.total_zx_pop).toFixed(1);
-  const r1          = ranking[0];
-  const r1Total     = r1 ? (r1.popZ1 + r1.popZ2) : 0;
-  const r5          = ranking.slice(0, 5).reduce((s, r) => s + r.popZ1 + r.popZ2, 0);
-  const r1Name      = r1 ? siteShortName(r1.site) : '';
+  // Summary stats — all computed over visible slice for executive view
+  const visPop    = visible.reduce((s, r) => s + r.popZ1 + r.popZ2, 0);
+  const visHaras  = visible.reduce((s, r) => s + r.harasCount, 0);
+  const visPct    = (100 * visPop / PLACEMENT_DATA.meta.total_zx_pop).toFixed(1);
+  const r1        = ranking[0];
+  const r1Total   = r1 ? (r1.popZ1 + r1.popZ2) : 0;
+  const r1Label   = r1 ? siteDisplayLabel(r1.site).primary : '';
 
-  const totalZxPop         = PLACEMENT_DATA.meta.total_zx_pop;
-  const delayedSTEMI       = Math.round(totalZxPop * STEMI_RATE);
-  const rescuedSTEMI       = Math.round(totalPop   * STEMI_RATE);
-  const remainingDelayed   = delayedSTEMI - rescuedSTEMI;
+  const totalZxPop       = PLACEMENT_DATA.meta.total_zx_pop;
+  const delayedSTEMI     = Math.round(totalZxPop * STEMI_RATE);
+  const rescuedSTEMI     = Math.round(visPop     * STEMI_RATE);
+  const remainingDelayed = delayedSTEMI - rescuedSTEMI;
 
   const summary = document.createElement('div');
   summary.style.cssText = 'padding:10px 16px;border-bottom:1px solid var(--border);background:rgba(157,78,221,0.04)';
   summary.innerHTML = `
-    <div style="font-family:'Space Mono',monospace;font-size:9px;letter-spacing:0.15em;color:#9d4edd;margin-bottom:8px">PLACEMENT SUMMARY</div>
+    <div style="font-family:'Space Mono',monospace;font-size:9px;letter-spacing:0.15em;color:#9d4edd;margin-bottom:8px">PLACEMENT SUMMARY — TOP ${visibleCount}</div>
     <div style="font-size:11px;line-height:1.45;color:var(--text);margin-bottom:10px">
-      <span style="color:#9d4edd;font-weight:500">${r1Name}</span> is the strongest first placement —
+      <span style="color:#9d4edd;font-weight:500">${r1Label}</span> is the highest-impact first site —
       improves PCI access for <span style="color:#fff">${fmtK(r1Total)} people</span>,
       including <span style="color:#00e5b4">${fmtK(r1?.popZ1 ?? 0)}</span>
       who move into <span style="color:#00e5b4">60-min access</span>.
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:10px">
       <div><div style="color:var(--muted);font-size:9px">If 1 site is built</div><div style="color:#fff;font-family:'Space Mono',monospace">${fmtK(r1Total)} gain access</div></div>
-      <div><div style="color:var(--muted);font-size:9px">If 5 sites are built</div><div style="color:#fff;font-family:'Space Mono',monospace">${fmtK(r5)} gain access</div></div>
-      <div><div style="color:var(--muted);font-size:9px">All 10 sites combined</div><div style="color:#9d4edd;font-family:'Space Mono',monospace">${fmtK(totalPop)} · ${totalHaras.toLocaleString()} haras</div></div>
-      <div><div style="color:var(--muted);font-size:9px">Of total Zone X pop</div><div style="color:#9d4edd;font-family:'Space Mono',monospace">${pctCovered}% reached</div></div>
+      <div><div style="color:var(--muted);font-size:9px">If top ${visibleCount} are built</div><div style="color:#fff;font-family:'Space Mono',monospace">${fmtK(visPop)} gain access</div></div>
+      <div><div style="color:var(--muted);font-size:9px">Top ${visibleCount} haras served</div><div style="color:#9d4edd;font-family:'Space Mono',monospace">${visHaras.toLocaleString()} neighborhoods</div></div>
+      <div><div style="color:var(--muted);font-size:9px">Of total Zone X pop</div><div style="color:#9d4edd;font-family:'Space Mono',monospace">${visPct}% reached</div></div>
     </div>
     <div id="placement-curve" style="margin-top:10px"></div>
     <div style="margin-top:12px;padding:11px 12px;border-radius:6px;background:rgba(224,62,62,0.1);border:1px solid rgba(224,62,62,0.4)">
       <div style="font-family:'Space Mono',monospace;font-size:9px;letter-spacing:0.18em;color:#ff5566;margin-bottom:5px;font-weight:700">DO-NOTHING COMPARATOR</div>
       <div style="font-size:10px;color:var(--text);line-height:1.55">
         Without any new sites: <span style="color:#ff5566;font-family:'Space Mono',monospace;font-weight:700">~${delayedSTEMI.toLocaleString()}</span> STEMI cases/yr in Zone X.<br>
-        After top 10 are built: <span style="color:#00e5b4;font-family:'Space Mono',monospace;font-weight:700">~${rescuedSTEMI.toLocaleString()}</span> reach timely care;
+        Top ${visibleCount} sites built: <span style="color:#00e5b4;font-family:'Space Mono',monospace;font-weight:700">~${rescuedSTEMI.toLocaleString()}</span> reach timely care;
         <span style="color:#ff6b3e;font-family:'Space Mono',monospace;font-weight:700">~${remainingDelayed.toLocaleString()}</span> still delayed.
       </div>
       <div style="font-size:8px;color:var(--muted);margin-top:5px;line-height:1.4;font-style:italic;opacity:0.7">${STEMI_NOTE}</div>
@@ -152,18 +154,19 @@ export function buildPlacementList(result, onSiteClick) {
   `;
   list.appendChild(summary);
 
-  ranking.forEach((r, i) => {
-    const div       = makeItem(`site-${i}`, 'cluster-item placement');
-    const z1k       = fmtK(r.popZ1);
-    const z2k       = fmtK(r.popZ2);
-    const cleanName = siteShortName(r.site);
-    const cls       = r.classification;
-    const score     = r.invScore || 0;
+  visible.forEach((r, i) => {
+    const div    = makeItem(`site-${i}`, 'cluster-item placement');
+    const z1k    = fmtK(r.popZ1);
+    const z2k    = fmtK(r.popZ2);
+    const lbl    = siteDisplayLabel(r.site);
+    const cls    = r.classification;
+    const score  = r.invScore || 0;
     div.innerHTML = `
       <div class="cluster-badge" style="background:#9d4edd22;color:#9d4edd;font-size:10px">${i + 1}</div>
       <span class="cluster-name" title="${r.site.n} — ${cls.label}">
-        <div style="font-size:11px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${cleanName}</div>
-        <div style="display:flex;align-items:center;gap:5px;margin-top:1px">
+        <div style="font-size:11px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${lbl.primary}</div>
+        <div style="font-size:9px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px">${lbl.secondary}</div>
+        <div style="display:flex;align-items:center;gap:5px;margin-top:2px">
           <span style="font-size:8px;font-family:'Space Mono',monospace;color:${cls.color};background:${cls.color}22;padding:1px 5px;border-radius:2px;letter-spacing:0.05em">${cls.label}</span>
           <span style="font-size:8px;color:var(--muted);font-family:'Space Mono',monospace">${score}/100</span>
         </div>
@@ -176,19 +179,28 @@ export function buildPlacementList(result, onSiteClick) {
     div.addEventListener('click', () => onSiteClick(i));
     list.appendChild(div);
   });
+
+  // Extended analysis note
+  const note = document.createElement('div');
+  note.style.cssText = 'padding:10px 16px;font-size:9px;color:var(--muted);line-height:1.5;border-top:1px solid var(--border);font-style:italic';
+  note.textContent = `Additional lower-impact sites available in extended analysis (${ranking.length - visibleCount} more sites evaluated).`;
+  list.appendChild(note);
 }
 
 // ── Placement site marker management ─────────────────────────────────────────────
 /**
  * Create and add numbered placement markers to the map.
+ * Only the top `visibleCount` sites get markers; the rest are computed
+ * internally but not shown on the map.
  *
  * @param {maplibregl.Map} map
  * @param {import('../engine/placement-engine.js').PlacementResult} result
  * @param {(i: number) => void} onMarkerClick
+ * @param {number} [visibleCount=5]
  * @returns {maplibregl.Marker[]}
  */
-export function showPlacementMarkers(map, result, onMarkerClick) {
-  return result.ranking.map((r, i) => {
+export function showPlacementMarkers(map, result, onMarkerClick, visibleCount = 5) {
+  return result.ranking.slice(0, visibleCount).map((r, i) => {
     const sz = Math.max(20, 32 - i * 1.2);
     const el = document.createElement('div');
 
@@ -291,10 +303,13 @@ export function refreshPlacementMarkers(markers, selectedSite) {
 // ── Marginal coverage curve ────────────────────────────────────────────────────
 /**
  * Render marginal + cumulative curve SVG into #placement-curve.
+ * Bars for sites within visibleCount are fully opaque; beyond are dimmed.
+ * A vertical cutoff line marks the top-N boundary.
  *
  * @param {import('../engine/placement-engine.js').RankedSite[]} ranking
+ * @param {number} [visibleCount=5]
  */
-export function renderMarginalCurve(ranking) {
+export function renderMarginalCurve(ranking, visibleCount = 5) {
   const target = document.getElementById('placement-curve');
   if (!target) return;
 
@@ -310,23 +325,37 @@ export function renderMarginalCurve(ranking) {
   const yFor = (v) => H - padY - (v / yMax) * innerH;
 
   const bars = marg.map((m, i) => {
-    const h = Math.max(1, (m / yMax) * innerH);
-    const x = xFor(i) - barW / 2;
-    return `<rect x="${x.toFixed(1)}" y="${(H - padY - h).toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="#9d4edd" opacity="0.35"/>`;
+    const h    = Math.max(1, (m / yMax) * innerH);
+    const x    = xFor(i) - barW / 2;
+    const fill = i < visibleCount ? '#9d4edd' : '#4a3060';
+    const op   = i < visibleCount ? '0.55' : '0.25';
+    return `<rect x="${x.toFixed(1)}" y="${(H - padY - h).toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="${fill}" opacity="${op}"/>`;
   }).join('');
 
+  // Cutoff line at the boundary between visible and hidden sites
+  const cutX = (xFor(visibleCount - 1) + xFor(visibleCount)) / 2;
+  const cutLine = visibleCount < N
+    ? `<line x1="${cutX.toFixed(1)}" y1="${padY}" x2="${cutX.toFixed(1)}" y2="${H - padY}" stroke="#9d4edd" stroke-width="1" stroke-dasharray="2,2" opacity="0.6"/>`
+    : '';
+
   const path = cum.map((v, i) => `${i === 0 ? 'M' : 'L'} ${xFor(i).toFixed(1)} ${yFor(v).toFixed(1)}`).join(' ');
-  const pts  = cum.map((v, i) => `<circle cx="${xFor(i).toFixed(1)}" cy="${yFor(v).toFixed(1)}" r="2" fill="#9d4edd"/>`).join('');
+  const pts  = cum.map((v, i) => {
+    const col = i < visibleCount ? '#9d4edd' : '#4a3060';
+    return `<circle cx="${xFor(i).toFixed(1)}" cy="${yFor(v).toFixed(1)}" r="2" fill="${col}" opacity="${i < visibleCount ? 1 : 0.4}"/>`;
+  }).join('');
 
   target.innerHTML = `
-    <div style="font-family:'Space Mono',monospace;font-size:8px;letter-spacing:0.15em;color:var(--muted);margin-bottom:3px">MARGINAL / CUMULATIVE</div>
+    <div style="font-family:'Space Mono',monospace;font-size:8px;letter-spacing:0.15em;color:var(--muted);margin-bottom:3px">MARGINAL / CUMULATIVE COVERAGE</div>
     <svg width="${W}" height="${H}" style="display:block;background:rgba(0,0,0,0.2);border-radius:3px">
       ${bars}
-      <path d="${path}" stroke="#9d4edd" stroke-width="1.5" fill="none"/>
+      ${cutLine}
+      <path d="${path}" stroke="#9d4edd" stroke-width="1.5" fill="none" opacity="0.7"/>
       ${pts}
     </svg>
     <div style="display:flex;justify-content:space-between;font-family:'Space Mono',monospace;font-size:8px;color:var(--muted);margin-top:2px">
-      <span>1</span><span>5</span><span>${N}</span>
+      <span>1</span>
+      <span style="color:#9d4edd">${visibleCount} shown</span>
+      <span>${N} total</span>
     </div>
   `;
 }
