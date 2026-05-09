@@ -10,7 +10,7 @@
  * modules in the correct order and hands off control to state.js.
  */
 
-import { HARAS_GEOJSON, HOSPITALS }           from './data/data-index.js';
+import { HARAS_GEOJSON, HOSPITALS, dataReady } from './data/data-index.js';
 
 import { initMap }                             from './map/map-init.js';
 import { addAllLayers }                        from './map/layers.js';
@@ -44,17 +44,20 @@ const map = initMap('map');
 
 // ── Map load ──────────────────────────────────────────────────────────────────
 map.on('load', async () => {
-  // ── 1. Add all map layers ────────────────────────────────────────────────
+  // ── 1. Wait for GeoJSON to arrive (fetch from static file, not JS parse) ──
+  await dataReady;
+
+  // ── 2. Add all map layers ────────────────────────────────────────────────
   const { deckOverlay, arcData } = addAllLayers(map, HARAS_GEOJSON, HOSPITALS);
 
   // Update arc-count badge here (layers.js is DOM-free)
   const arcCountEl = document.getElementById('arc-count');
   if (arcCountEl) arcCountEl.textContent = arcData.length.toLocaleString();
 
-  // ── 2. Bind state module to map ──────────────────────────────────────────
+  // ── 3. Bind state module to map ──────────────────────────────────────────
   initState(map);
 
-  // ── 3. Wire map interactions ─────────────────────────────────────────────
+  // ── 4. Wire map interactions ─────────────────────────────────────────────
   const { REGIONS } = await import('./data/data-index.js');
 
   wireInteractions(map, {

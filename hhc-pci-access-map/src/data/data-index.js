@@ -10,10 +10,24 @@
  */
 
 import {
-  HARAS_GEOJSON,
   HARA_AUX_IDS, HARA_AUX_DIST, HARA_AUX_HAV, HARA_AUX_D2, HARA_AUX_D3,
-  HARA_GOV_IDX, HARA_GOV_TABLE,   // positionally aligned to HARA_AUX_IDS; HARA_GOV_IDS removed
+  HARA_GOV_IDX, HARA_GOV_TABLE,
 } from './haras.geojson.js';
+
+// ─── Async GeoJSON load ───────────────────────────────────────────────────────
+// The GeoJSON (11 MB) lives as a static file rather than a JS object literal,
+// so the browser's native JSON parser handles it off the main thread.
+// All consumers must await `dataReady` before accessing `HARAS_GEOJSON`.
+let HARAS_GEOJSON = null;
+
+export const dataReady = fetch('/data/haras.geojson')
+  .then((r) => {
+    if (!r.ok) throw new Error(`GeoJSON fetch failed: ${r.status}`);
+    return r.json();
+  })
+  .then((json) => {
+    HARAS_GEOJSON = json;
+  });
 
 import { HOSPITALS, HOSPITAL_COLORS, CATCHMENT_MATCH } from './hospitals.js';
 import { PLACEMENT_DATA } from './placement-data.js';
@@ -107,8 +121,9 @@ export function cloneGeojson() {
 }
 
 // ─── Re-export raw data and processed structures ──────────────────────────────
+// HARAS_GEOJSON is a live binding: null at parse time, populated after dataReady resolves.
+export { HARAS_GEOJSON };
 export {
-  HARAS_GEOJSON,
   HOSPITALS,
   HOSPITAL_COLORS,
   CATCHMENT_MATCH,
