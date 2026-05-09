@@ -1,0 +1,9 @@
+{
+  "name": "hhc-pci-access-map",
+  "private": true,
+  "scripts": {
+    "dev": "npx --yes serve hhc-pci-access-map -l 3000 --no-clipboard",
+    "start": "npx --yes serve hhc-pci-access-map -l 3000 --no-clipboard",
+    "preview": "npx --yes serve . -l 3000 --no-clipboard"
+  }
+}
