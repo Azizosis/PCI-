@@ -52,6 +52,7 @@ let _selectedSite    = -1;     // 0-indexed rank in placement ranking, -1 = none
 let _placementResult = null;   // PlacementResult | null  (lazy, cached)
 let _placementMarkers= [];     // maplibregl.Marker[]
 let _layerState      = { ...DEFAULT_LAYER_STATE };
+let _geoWork         = null;   // mutable working copy of HARAS_GEOJSON (cloned per mode)
 
 // ── Initialisation ────────────────────────────────────────────────────────────
 /**

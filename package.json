@@ -1,5 +1,6 @@
 {
   "name": "hhc-pci-access-map",
+  "type": "module",
   "private": true,
   "scripts": {
     "dev": "serve hhc-pci-access-map -l 3000 --no-clipboard",

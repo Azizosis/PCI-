@@ -1,19 +1,34 @@
 /**
  * hospitals.js
  *
- * Static registry of the 26 PCI hospitals across KSA, with coordinates and
- * a color assignment for catchment visualisation.
+ * Static registry of the 26 PCI hospitals across KSA.
  *
- * HOSPITALS — array of { name, lat, lng }
- * HOSPITAL_COLORS — map of name → hex color (used by catchment fill + popups)
- * CATCHMENT_MATCH — prebuilt MapLibre 'match' expression (avoids rebuilding on each paint call)
+ * HOSPITALS      — array of { name, lat, lng }
+ * HOSPITAL_COLORS — name → hex color for catchment visualisation
+ * CATCHMENT_MATCH — MapLibre 'match' expression built once from HOSPITAL_COLORS
+ *
+ * Source: extracted verbatim from hhc-pci-access-map_10.html by scripts/extract_data.py
  */
 
 // ─── Hospital list ────────────────────────────────────────────────────────────
-// Paste HOSPITALS array from hhc-pci-access-map_10.html here.
-export const HOSPITALS = /* INSERT_HOSPITALS */ [];
+export const HOSPITALS = [
+  {name:'King Fahad Hospital Baha',lat:20.063,lng:41.438},{name:'King Abdullah Hospital Bisha',lat:20.034,lng:42.613},
+  {name:'South Kunfudha General Hospital',lat:18.870,lng:41.328},{name:'King Abdulaziz Hospital Taif',lat:21.268,lng:40.373},
+  {name:'Gurayat General Hospital',lat:31.329,lng:37.363},{name:'King Abdulaziz Specialist Hospital Sakaka',lat:29.938,lng:40.187},
+  {name:'Prince Abdullah Bin Abdulaziz Bin Musaed Cardiac Center',lat:30.996,lng:41.048},{name:'Rafhaa General Hospital',lat:29.626,lng:43.514},
+  {name:'King Fahad Hospital Tabuk',lat:28.447,lng:36.514},{name:'Madinah Cardiac Center',lat:24.495,lng:39.562},
+  {name:'King Fahd Specialist Hospital',lat:26.350,lng:43.969},{name:'Cardiac Center at King Khaled Hospital Hail',lat:27.509,lng:41.697},
+  {name:'Prince Mohammed Bin Abdulaziz Hospital Riyadh',lat:24.709,lng:46.793},{name:'King Saud Medical City General Hospital',lat:24.628,lng:46.691},
+  {name:'King Fahad Medical City',lat:24.687,lng:46.702},{name:'Hafr Albaten Central Hospital',lat:28.311,lng:45.954},
+  {name:'King Khaled Hospital Najran',lat:17.545,lng:44.233},{name:'Prince Faisal bin Khalid Cardiac Center',lat:18.210,lng:42.498},
+  {name:'Prince Mohammed bin Nasser Hospital',lat:16.996,lng:42.620},{name:'King Fahad Specialist Hospital Dammam',lat:26.411,lng:50.101},
+  {name:'Prince Sultan Cardiac Center Al Ahssa',lat:25.359,lng:49.561},{name:'Dammam Medical Complex',lat:26.432,lng:50.084},
+  {name:'Al Noor Specialist Hospital Makkah',lat:21.385,lng:39.861},{name:'King Abdallah Medical City',lat:21.383,lng:39.881},
+  {name:'King Fahd Hospital',lat:21.543,lng:39.167},{name:'King Abdullah Medical Complex',lat:21.768,lng:39.100}
+];
 
 // ─── Per-hospital colors ──────────────────────────────────────────────────────
+// Order matches the visual legend; every hospital must have an entry.
 export const HOSPITAL_COLORS = {
   'Prince Mohammed bin Nasser Hospital':                      '#e63946',
   'Prince Faisal bin Khalid Cardiac Center':                  '#457b9d',
@@ -47,5 +62,5 @@ export const HOSPITAL_COLORS = {
 export const CATCHMENT_MATCH = [
   'match', ['get', 'Nearest_Hospital'],
   ...Object.entries(HOSPITAL_COLORS).flatMap(([name, color]) => [name, color]),
-  '#444', // fallback
+  '#444444', // fallback for unmatched haras
 ];
