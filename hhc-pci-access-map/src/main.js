@@ -35,6 +35,7 @@ import {
   toggleLayer,
   computeHospitalStats,
   flyToHospitalByName,
+  clearPlacementSelection,
 }                                              from './state.js';
 import { closeDossier }                        from './ui/dossier.js';
 import { DEFAULT_LAYER_STATE }                 from './config.js';
@@ -104,7 +105,10 @@ map.on('load', async () => {
 
   // ── 7. Wire zoom + dossier-close buttons ─────────────────────────────────
   wireZoomControls(map);
-  wireDossierClose(() => closeDossier(map));
+  wireDossierClose(() => {
+    clearPlacementSelection(); // resets marker highlights if in placement mode
+    closeDossier(map);
+  });
 
   // ── 8. Enter default view mode ───────────────────────────────────────────
   setViewMode('zone');

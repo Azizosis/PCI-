@@ -71,6 +71,25 @@ export const getSelectedSite    = () => _selectedSite;
 export const getPlacementResult = () => _placementResult;
 export const getLayerState      = () => ({ ..._layerState });
 
+/**
+ * Clear the active placement selection — resets marker highlights and
+ * _selectedSite without changing view mode or triggering a mode transition.
+ * Called by the dossier close button when in placement mode.
+ */
+export function clearPlacementSelection() {
+  if (_viewMode !== 'placement' || _selectedSite < 0) return;
+  _selectedSite = -1;
+  refreshPlacementMarkers(_placementMarkers, -1);
+  // Restore the base placement fill (no site focus)
+  requestAnimationFrame(() => {
+    if (!_geoWork) return;
+    clearSiteFocusOnFeatures(_geoWork);
+    _map.getSource('haras')?.setData(_geoWork);
+    if (_map.getLayer('haras-fill'))    _map.setPaintProperty('haras-fill',    'fill-color', getPlacementFill(-1));
+    if (_map.getLayer('haras-outline')) _map.setPaintProperty('haras-outline', 'line-color', getPlacementFill(-1));
+  });
+}
+
 // ── View mode transitions ──────────────────────────────────────────────────────
 /**
  * Transition to a new view mode.
