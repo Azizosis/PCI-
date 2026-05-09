@@ -188,16 +188,71 @@ export function buildPlacementList(result, onSiteClick) {
  * @returns {maplibregl.Marker[]}
  */
 export function showPlacementMarkers(map, result, onMarkerClick) {
+  // Track which marker index is currently hovered so refreshPlacementMarkers
+  // never clobbers the hover-scale on the marker the mouse is still over.
+  let _hoveredIdx = -1;
+
   return result.ranking.map((r, i) => {
     const sz = Math.max(20, 32 - i * 1.2);
     const el = document.createElement('div');
-    el.style.cssText = `width:${sz}px;height:${sz}px;border-radius:50%;background:#9d4edd;color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:${i < 3 ? 12 : 10}px;font-weight:700;border:2px solid #fff;box-shadow:0 0 14px rgba(157,78,221,0.55);cursor:pointer;transition:transform 0.15s`;
+    // pointer-events:auto ensures the element always receives mouse events
+    // even when the MapLibre canvas repaints beneath it.
+    el.style.cssText = [
+      `width:${sz}px`,
+      `height:${sz}px`,
+      'border-radius:50%',
+      'background:#9d4edd',
+      'color:#fff',
+      'display:flex',
+      'align-items:center',
+      'justify-content:center',
+      `font-family:'Space Mono',monospace`,
+      `font-size:${i < 3 ? 12 : 10}px`,
+      'font-weight:700',
+      'border:2px solid #fff',
+      'box-shadow:0 0 14px rgba(157,78,221,0.55)',
+      'cursor:pointer',
+      'transition:transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease',
+      'pointer-events:auto',
+      'will-change:transform',  // promotes element to its own compositing layer
+    ].join(';');
     el.textContent = String(i + 1);
     el.title = `#${i + 1} ${r.site.n} — rescues ${fmtK(r.popZ1 + r.popZ2)}`;
-    el.addEventListener('mouseenter', () => { el.style.transform = 'scale(1.15)'; });
-    el.addEventListener('mouseleave', () => { el.style.transform = 'scale(1)'; });
-    el.addEventListener('click',      () => onMarkerClick(i));
-    return new maplibregl.Marker({ element: el }).setLngLat([r.site.lng, r.site.lat]).addTo(map);
+
+    el.addEventListener('mouseenter', () => {
+      _hoveredIdx = i;
+      // Only apply glow/scale if this marker is not the currently-selected one
+      // (refreshPlacementMarkers already handles the selected style).
+      if (!el.dataset.selected) {
+        el.style.transform  = 'scale(1.18)';
+        el.style.boxShadow  = '0 0 22px rgba(157,78,221,0.85)';
+      }
+    });
+
+    el.addEventListener('mouseleave', () => {
+      _hoveredIdx = -1;
+      // Restore the style that refreshPlacementMarkers would have set,
+      // without calling refreshPlacementMarkers (which would touch all markers).
+      if (el.dataset.selected === 'true') {
+        el.style.transform  = 'scale(1.25)';
+        el.style.boxShadow  = '0 0 28px rgba(157,78,221,0.95), 0 0 8px #00e5b4';
+      } else if (el.dataset.dimmed === 'true') {
+        el.style.transform  = 'scale(0.85)';
+        el.style.boxShadow  = 'none';
+      } else {
+        el.style.transform  = 'scale(1)';
+        el.style.boxShadow  = '0 0 14px rgba(157,78,221,0.55)';
+      }
+    });
+
+    el.addEventListener('click', (evt) => {
+      evt.stopPropagation(); // prevent haras-fill click from also firing
+      onMarkerClick(i);
+    });
+
+    return new maplibregl.Marker({ element: el, anchor: 'center' })
+      .setLngLat([r.site.lng, r.site.lat])
+      .addTo(map);
   });
 }
 
@@ -210,18 +265,28 @@ export function showPlacementMarkers(map, result, onMarkerClick) {
 export function refreshPlacementMarkers(markers, selectedSite) {
   markers.forEach((m, i) => {
     const el = m.getElement();
+
     if (selectedSite < 0) {
+      // No site selected — all markers at full resting state
+      el.dataset.selected  = 'false';
+      el.dataset.dimmed    = 'false';
       el.style.opacity     = '1';
       el.style.transform   = 'scale(1)';
       el.style.boxShadow   = '0 0 14px rgba(157,78,221,0.55)';
       el.style.borderColor = '#fff';
     } else if (selectedSite === i) {
+      // This marker is the active selection — highlight it
+      el.dataset.selected  = 'true';
+      el.dataset.dimmed    = 'false';
       el.style.opacity     = '1';
       el.style.transform   = 'scale(1.25)';
       el.style.boxShadow   = '0 0 28px rgba(157,78,221,0.95), 0 0 8px #00e5b4';
       el.style.borderColor = '#00e5b4';
     } else {
-      el.style.opacity     = '0.35';
+      // Another marker is selected — dim this one but keep it fully visible
+      el.dataset.selected  = 'false';
+      el.dataset.dimmed    = 'true';
+      el.style.opacity     = '0.45';
       el.style.transform   = 'scale(0.85)';
       el.style.boxShadow   = 'none';
       el.style.borderColor = '#fff';

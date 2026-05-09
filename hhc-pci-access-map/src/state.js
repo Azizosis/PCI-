@@ -169,23 +169,30 @@ export function openCatchmentDossierForHospital(hospName, stats, color) {
 export function openPlacementDossier(siteIdx) {
   if (!_placementResult) return;
 
-  // Clear previous site-focus annotations, then apply new ones — on the working copy
-  clearSiteFocusOnFeatures(_geoWork);
-  setSiteFocusOnFeatures(_geoWork, _placementResult, siteIdx);
-  _map.getSource('haras')?.setData(_geoWork);
-
-  // Update fill expression for focus mode
-  if (_map.getLayer('haras-fill')) {
-    _map.setPaintProperty('haras-fill', 'fill-color', getPlacementFill(siteIdx));
-  }
-
   _selectedSite = siteIdx;
+
+  // Update markers and open dossier immediately — before any source mutation —
+  // so the marker never disappears due to a canvas repaint triggered by setData.
   refreshPlacementMarkers(_placementMarkers, siteIdx);
+  openSiteDossier(_placementResult, siteIdx);
 
   const r = _placementResult.ranking[siteIdx];
   if (_map) flyToSite(_map, r.site.lng, r.site.lat);
 
-  openSiteDossier(_placementResult, siteIdx);
+  // Defer source mutation to the next animation frame so the marker click
+  // completes its event cycle before MapLibre repaints the canvas.
+  requestAnimationFrame(() => {
+    clearSiteFocusOnFeatures(_geoWork);
+    setSiteFocusOnFeatures(_geoWork, _placementResult, siteIdx);
+    _map.getSource('haras')?.setData(_geoWork);
+
+    if (_map.getLayer('haras-fill')) {
+      _map.setPaintProperty('haras-fill', 'fill-color', getPlacementFill(siteIdx));
+    }
+    if (_map.getLayer('haras-outline')) {
+      _map.setPaintProperty('haras-outline', 'line-color', getPlacementFill(siteIdx));
+    }
+  });
 }
 
 /** Active reverse-lookup popup (placement mode Zone X clicks). */
@@ -195,7 +202,7 @@ let _reversePopup = null;
  * Handle a click on a Zone X haras in placement mode.
  * Shows a MapLibre popup with three branches:
  *   1) Covered in the top-10 ranking → which site and new drive time
- *   2) Not in top-10 but has a best candidate → show best alternative
+ *   2) Not in top-10 but has a best candidate ��� show best alternative
  *   3) Unreachable by any candidate
  *
  * @param {object} props   — GeoJSON feature properties
