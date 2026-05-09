@@ -23,6 +23,22 @@ import { fmtK, fmtPct, siteShortName } from '../utils/format.js';
 import { renderImpactMap }          from './impact-map-svg.js';
 import { resetCamera }              from '../map/camera.js';
 
+// ── Design token reads ────────────────────────────────────────────────────────
+// Snapshot CSS custom properties once so HTML template strings reference named
+// constants rather than hardcoded hex literals.  If a token value changes in
+// tokens.css the new value is automatically picked up on the next page load.
+function tok(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+const C_Z1            = tok('--z1');
+const C_Z2            = tok('--z2');
+const C_ZX            = tok('--zx');
+const C_ACCENT_PURPLE = tok('--accent-purple');
+const C_ACCENT_ORANGE = tok('--accent-orange');
+const C_PRIORITY_HIGH = tok('--priority-high');
+const C_HOSP_FALLBACK = tok('--hosp-fallback');
+
 // ── Dossier DOM refs ──────────────────────────────────────────────────────────
 // IDs match index.html: #dossier-name, #dossier-meta, #dossier-badge, #dossier-body
 const $ = (id) => document.getElementById(id);
@@ -120,7 +136,7 @@ export function openRegionDossier(regionId, geojson) {
 
   const frag = fragilitySeverity(zx.pct_pop, totalPrioScore);
 
-  setBadge('REG', '#00e5b4');
+  setBadge('REG', C_Z1);
   openDossierPanel(
     region.name,
     `Administrative Region · ${total.nbhd.toLocaleString()} haras`,
@@ -138,7 +154,7 @@ function renderRegionDossier({ region, z1, z2, zx, stemiZ1, stemiZ2, stemiZx, to
     ? section('PCI Centers Serving This Region', `
         <div class="dossier-hosp-list">
           ${region.hospitals.map((h) => {
-            const col = HOSPITAL_COLORS[h] || '#0077ff';
+            const col = HOSPITAL_COLORS[h] || C_HOSP_FALLBACK;
             return `<div class="dossier-hosp-item">
               <span class="dossier-hosp-dot" style="background:${col}"></span>
               <span class="dossier-hosp-name">${h}</span>
@@ -151,29 +167,29 @@ function renderRegionDossier({ region, z1, z2, zx, stemiZ1, stemiZ2, stemiZx, to
   return `
     ${section('Access Zone Breakdown', `
       <div class="dossier-zone-bars">
-        ${zoneBar('Zone 1 ≤60 min',    z1.pct_pop, z1.pop, z1.nbhd, '#00e5b4', stemiZ1)}
-        ${zoneBar('Zone 2 61-120 min', z2.pct_pop, z2.pop, z2.nbhd, '#d4a017', stemiZ2)}
-        ${zoneBar('Zone X >120 min',   zx.pct_pop, zx.pop, zx.nbhd, '#e03e3e', stemiZx)}
+        ${zoneBar('Zone 1 ≤60 min',    z1.pct_pop, z1.pop, z1.nbhd, C_Z1, stemiZ1)}
+        ${zoneBar('Zone 2 61-120 min', z2.pct_pop, z2.pop, z2.nbhd, C_Z2, stemiZ2)}
+        ${zoneBar('Zone X >120 min',   zx.pct_pop, zx.pop, zx.nbhd, C_ZX, stemiZx)}
       </div>
     `)}
 
     ${section('Access Burden', `
       <div class="dossier-stat-grid">
-        ${stat(fmtK(zx.pop),                           'people beyond 120 min',   '#e03e3e')}
-        ${stat(`${Math.round(totalPrioScore / 1000)}K`, 'person-hrs of burden',    '#ff6b3e')}
-        ${stat(`~${stemiZx.toLocaleString()}`,          'delayed STEMI/yr',         '#e03e3e')}
-        ${stat(frag.label,                              'fragility severity',       frag.color)}
+        ${stat(fmtK(zx.pop),                           'people beyond 120 min',  C_ZX)}
+        ${stat(`${Math.round(totalPrioScore / 1000)}K`, 'person-hrs of burden',   C_PRIORITY_HIGH)}
+        ${stat(`~${stemiZx.toLocaleString()}`,          'delayed STEMI/yr',        C_ZX)}
+        ${stat(frag.label,                              'fragility severity',      frag.color)}
       </div>
     `)}
 
     ${section('System Dependency', `
       <div class="dossier-narrative">
         ${zx.pct_pop >= 0.3
-          ? `<strong style="color:#e03e3e">${fmtPct(zx.pct_pop)}</strong> of ${region.name}&apos;s population
+          ? `<strong style="color:${C_ZX}">${fmtPct(zx.pct_pop)}</strong> of ${region.name}&apos;s population
              (${fmtK(zx.pop)} people) live beyond 120-min drive time of any PCI-capable center.
              This cohort relies on <em>transfer chains</em> from ${capital}, with typical delays
              exceeding 3 hours &mdash; well beyond the 90-min door-to-balloon target.`
-          : `<strong style="color:#00e5b4">${fmtPct(z1.pct_pop)}</strong> of ${region.name}&apos;s population
+          : `<strong style="color:${C_Z1}">${fmtPct(z1.pct_pop)}</strong> of ${region.name}&apos;s population
              has optimal PCI access (&le;60 min). The remaining ${fmtPct(zx.pct_pop)} in Zone X
              &mdash; ${fmtK(zx.pop)} people &mdash; still depend on extended transfers.`
         }
@@ -215,18 +231,18 @@ function renderCatchmentDossier({ s, hospName, color }) {
   return `
     ${section('Catchment Zone Breakdown', `
       <div class="dossier-zone-bars">
-        ${catchmentZoneBar('Zone 1 ≤60 min',   s.z1.h, s.haras, s.z1.p, '#00e5b4')}
-        ${catchmentZoneBar('Zone 2 61-120 min', s.z2.h, s.haras, s.z2.p, '#d4a017')}
-        ${catchmentZoneBar('Zone X >120 min',   s.zx.h, s.haras, s.zx.p, '#e03e3e')}
+        ${catchmentZoneBar('Zone 1 ≤60 min',   s.z1.h, s.haras, s.z1.p, C_Z1)}
+        ${catchmentZoneBar('Zone 2 61-120 min', s.z2.h, s.haras, s.z2.p, C_Z2)}
+        ${catchmentZoneBar('Zone X >120 min',   s.zx.h, s.haras, s.zx.p, C_ZX)}
       </div>
     `)}
 
     ${section('Catchment Metrics', `
       <div class="dossier-stat-grid">
-        ${stat(fmtK(s.pop),                   'total catchment pop',    color)}
-        ${stat(fmtK(s.zx?.p ?? 0),            'Zone X population',      '#e03e3e')}
-        ${stat(`~${stemiZx.toLocaleString()}`, 'delayed STEMI/yr',       '#e03e3e')}
-        ${stat(s.z1.h.toLocaleString(),        'haras in 60-min zone',   color)}
+        ${stat(fmtK(s.pop),                   'total catchment pop',   color)}
+        ${stat(fmtK(s.zx?.p ?? 0),            'Zone X population',     C_ZX)}
+        ${stat(`~${stemiZx.toLocaleString()}`, 'delayed STEMI/yr',      C_ZX)}
+        ${stat(s.z1.h.toLocaleString(),        'haras in 60-min zone',  color)}
       </div>
     `)}
 
@@ -235,7 +251,7 @@ function renderCatchmentDossier({ s, hospName, color }) {
         ${hospName} serves <strong>${s.haras.toLocaleString()} haras</strong>
         with a total catchment population of <strong>${fmtK(s.pop)}</strong>.
         ${s.zx.h > 0
-          ? `However, <strong style="color:#e03e3e">${s.zx.h.toLocaleString()} haras</strong>
+          ? `However, <strong style="color:${C_ZX}">${s.zx.h.toLocaleString()} haras</strong>
              (${fmtK(s.zx.p)} people) fall in Zone X &mdash; over 120 min drive-time &mdash;
              indicating a structural access gap that cannot be resolved by optimizing
              existing routing alone.`
@@ -295,19 +311,19 @@ function renderSiteDossier({ r, cls, govData }) {
 
     ${section('Population Impact', `
       <div class="dossier-stat-grid">
-        ${stat(fmtK(r.popZ1),               'gain &le;60-min access',      '#00e5b4')}
-        ${stat(fmtK(r.popZ2),               'gain 60-120-min access',      '#d4a017')}
-        ${stat(fmtK(popReached),             'total population rescued',    '#9d4edd')}
-        ${stat(`~${stemiYr.toLocaleString()}`, 'STEMI/yr gaining timely care', '#00e5b4')}
+        ${stat(fmtK(r.popZ1),               'gain &le;60-min access',       C_Z1)}
+        ${stat(fmtK(r.popZ2),               'gain 60-120-min access',       C_Z2)}
+        ${stat(fmtK(popReached),             'total population rescued',     C_ACCENT_PURPLE)}
+        ${stat(`~${stemiYr.toLocaleString()}`, 'STEMI/yr gaining timely care', C_Z1)}
       </div>
     `)}
 
     ${section('Intervention Score Breakdown', `
       <div class="dossier-score-bars">
-        ${scorePart('Pop coverage',    r.scoreParts.pop,   0.40, '#9d4edd')}
-        ${scorePart('&le;60-min gain', r.scoreParts.z1,    0.30, '#00e5b4')}
-        ${scorePart('Redundancy red.', r.scoreParts.red,   0.15, '#d4a017')}
-        ${scorePart('STEMI volume',    r.scoreParts.stemi, 0.15, '#ff8c42')}
+        ${scorePart('Pop coverage',    r.scoreParts.pop,   0.40, C_ACCENT_PURPLE)}
+        ${scorePart('&le;60-min gain', r.scoreParts.z1,    0.30, C_Z1)}
+        ${scorePart('Redundancy red.', r.scoreParts.red,   0.15, C_Z2)}
+        ${scorePart('STEMI volume',    r.scoreParts.stemi, 0.15, C_ACCENT_ORANGE)}
       </div>
     `)}
 
@@ -317,8 +333,8 @@ function renderSiteDossier({ r, cls, govData }) {
           const tot = v.popZ1 + v.popZ2;
           return `<div class="dossier-gov-item">
             <span class="dossier-gov-name">${gov}</span>
-            <span class="dossier-gov-z1" style="color:#00e5b4">${fmtK(v.popZ1)}</span>
-            <span class="dossier-gov-z2" style="color:#d4a017">${fmtK(v.popZ2)}</span>
+            <span class="dossier-gov-z1" style="color:${C_Z1}">${fmtK(v.popZ1)}</span>
+            <span class="dossier-gov-z2" style="color:${C_Z2}">${fmtK(v.popZ2)}</span>
             <span class="dossier-gov-tot">${fmtK(tot)}</span>
           </div>`;
         }).join('')}
@@ -364,7 +380,7 @@ function zoneBar(label, pct, pop, nbhd, color, stemi) {
       </div>
       <div class="dossier-zone-pct" style="color:${color}">${fmtPct(pct)}</div>
       <div class="dossier-zone-pop">${fmtK(pop)} · ${nbhd.toLocaleString()} haras</div>
-      <div class="dossier-zone-stemi" style="color:${color === '#e03e3e' ? '#e03e3e' : 'var(--muted)'}">~${stemi.toLocaleString()} STEMI/yr</div>
+      <div class="dossier-zone-stemi" style="color:${color === C_ZX ? C_ZX : 'var(--muted)'}">~${stemi.toLocaleString()} STEMI/yr</div>
     </div>
   `;
 }

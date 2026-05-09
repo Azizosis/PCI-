@@ -8,8 +8,8 @@
 
 /* Neighborhood hover popup */
 .nbhd-popup .maplibregl-popup-content {
-  background: #0d1318 !important;
-  border: 1px solid #1c2a35 !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
   border-radius: 6px !important;
   padding: 10px 14px !important;
   min-width: 200px !important;

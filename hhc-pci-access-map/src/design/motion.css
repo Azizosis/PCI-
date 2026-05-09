@@ -1,5 +1,5 @@
 /* ============================================================
-   Motion — animations and reduced-motion overrides
+   Motion — animations, performance hints, reduced-motion
    ============================================================ */
 
 @keyframes pulse {
@@ -16,23 +16,47 @@
   animation: pulse 2s ease-in-out infinite;
 }
 
-/* ── Reduced-motion overrides ─────────────────── */
+/*
+ * Promote panels that animate to their own compositor layers.
+ * This prevents the map canvas from being repainted during the slide.
+ * Only applied when the element is expected to move (not permanently).
+ */
+.dossier {
+  will-change: transform;
+}
+
+/* ── Reduced-motion overrides ────────────────────────────────────────────── */
+/*
+ * Users who set prefers-reduced-motion: reduce expect NO animated motion.
+ * We kill every transition and animation — the --panel-blur token is also
+ * set to none in tokens.css under this same query, removing backdrop-filter
+ * processing cost on devices that typically request reduced motion.
+ */
 @media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
   .status-dot {
     animation: none;
     opacity: 1;
+    box-shadow: none;
   }
 
+  /*
+   * The dossier normally slides in with a spring curve.
+   * Under reduced motion it appears/disappears instantly.
+   * The open class still controls visibility via transform;
+   * we just set duration to near-zero rather than removing transition
+   * entirely, so JS logic that depends on transitionend still fires.
+   */
   .dossier {
-    transition: none;
-  }
-
-  .toggle-pill,
-  .toggle-thumb,
-  .viewmode-btn,
-  .cluster-item,
-  .dossier-close,
-  .zoom-btn {
-    transition: none;
+    will-change: auto;  /* release compositor layer — no animation needed */
+    transition-duration: 0.01ms !important;
   }
 }

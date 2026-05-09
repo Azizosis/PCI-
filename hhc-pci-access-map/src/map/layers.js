@@ -16,6 +16,11 @@
 import { ZONE_FILL_EXPR, HARAS_FILL_OPACITY, HARAS_LINE_WIDTH } from './styles.js';
 import { polyCentroid } from '../utils/geo.js';
 
+/** Read a CSS custom property from :root as a trimmed string. */
+function tok(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
 // ── Per-layer add functions ───────────────────────────────────────────────────
 
 /**
@@ -77,7 +82,7 @@ export function addUnreachableExtrusionLayer(map) {
       layout: { visibility: 'visible' },
       filter: ['==', ['get', 'Zone'], 'Zone X'],
       paint: {
-        'fill-extrusion-color':             '#e03e3e',
+        'fill-extrusion-color':             tok('--zx'),
         'fill-extrusion-height':            ['min', 30000, ['*', 45, ['^', ['get', 'POPULATION'], 0.6]]],
         'fill-extrusion-base':              0,
         'fill-extrusion-opacity':           0.85,
@@ -114,10 +119,10 @@ export function addHospitalLayer(map, hospitals) {
     source: 'hospitals',
     paint: {
       'circle-radius':       6,
-      'circle-color':        '#0077ff',
+      'circle-color':        tok('--hosp'),
       'circle-opacity':      0.95,
       'circle-stroke-width': 1.5,
-      'circle-stroke-color': '#001f5c',
+      'circle-stroke-color': tok('--hosp-stroke'),
     },
   });
 }

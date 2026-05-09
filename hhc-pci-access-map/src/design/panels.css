@@ -11,7 +11,7 @@
   width: var(--panel-w);
   background: rgba(8, 12, 16, 0.92);
   border-right: 1px solid var(--border);
-  backdrop-filter: blur(12px);
+  backdrop-filter: var(--panel-blur);
   z-index: 10;
   display: flex;
   flex-direction: column;
@@ -217,7 +217,7 @@
   width: var(--dossier-w);
   background: rgba(8, 12, 16, 0.95);
   border-left: 1px solid var(--border);
-  backdrop-filter: blur(12px);
+  backdrop-filter: var(--panel-blur);
   z-index: 10;
   display: flex;
   flex-direction: column;
