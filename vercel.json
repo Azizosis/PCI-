@@ -1,21 +1,22 @@
 {
   "version": 2,
-  "public": false,
-  "buildCommand": null,
-  "outputDirectory": "hhc-pci-access-map",
-  "headers": [
+  "routes": [
     {
-      "source": "/(.*)\\.js",
-      "headers": [
-        { "key": "Content-Type", "value": "text/javascript; charset=utf-8" }
-      ]
+      "src": "/(.*\\.js)",
+      "headers": { "Content-Type": "text/javascript; charset=utf-8" },
+      "dest": "/hhc-pci-access-map/$1"
     },
     {
-      "source": "/(.*)\\.geojson",
-      "headers": [
-        { "key": "Content-Type",  "value": "application/geo+json; charset=utf-8" },
-        { "key": "Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=604800" }
-      ]
+      "src": "/(.*\\.geojson)",
+      "headers": {
+        "Content-Type": "application/geo+json; charset=utf-8",
+        "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800"
+      },
+      "dest": "/hhc-pci-access-map/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/hhc-pci-access-map/$1"
     }
   ]
 }
