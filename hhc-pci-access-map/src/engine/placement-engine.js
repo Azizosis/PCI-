@@ -19,12 +19,16 @@
  * Keeping them separate keeps the analytical logic auditable.
  */
 
-import { PLACEMENT_DATA } from '../data/data-index.js';
-import { HARA_AUX }       from '../data/data-index.js';
-import { STEMI_RATE }      from './assumptions.js';
-import { CLASS_THRESHOLDS } from './assumptions.js';
-import { normalizeToMax, safeMax } from '../utils/normalize.js';
-import { fragilitySeverity }       from './fragility.js';
+import { PLACEMENT_DATA, HARA_INDEX }               from '../data/data-index.js';
+import {
+  STEMI_RATE,
+  CLASS_THRESHOLDS,
+  GREEDY_W_Z1,
+  GREEDY_W_Z2,
+  SCORE_WEIGHTS,
+} from './assumptions.js';
+import { normalizeToMax, safeMax }  from '../utils/normalize.js';
+import { fragilitySeverity }        from './fragility.js';
 
 // ── Public types ──────────────────────────────────────────────────────────────
 /**
@@ -48,21 +52,53 @@ import { fragilitySeverity }       from './fragility.js';
  * @typedef {{ ranking: RankedSite[], covered: Set<number> }} PlacementResult
  */
 
+// ── Do-nothing comparator ─────────────────────────────────────────────────────
+/**
+ * STEMI cases per year under the current status quo — i.e. the counterfactual
+ * used in the dossier "Impact without this site" block.
+ *
+ * This number is derived from the Zone X population total (all haras with
+ * Driving_Min > 120 or unreachable) multiplied by STEMI_RATE.  It is
+ * intentionally labelled as a "do-nothing" baseline so analysts can see the
+ * clinical cost of inaction, not just the benefit of action.
+ *
+ * Populated by augmentRankingWithScore() from the placement result; exposed
+ * here as a placeholder for documentation purposes.
+ */
+export let DO_NOTHING_STEMI_YR = null; // set after computePlacement() resolves
+
 // ── Classification ────────────────────────────────────────────────────────────
 /**
- * Classify a site into PCI Hub / tPA Spoke / Transfer Optimization.
+ * Classify a proposed site into PCI Hub / tPA Spoke / Transfer Optimization.
  *
- * @param {number} invScore
- * @param {number} popReached
+ * WHY PCI Hub uses AND logic:
+ *   A PCI Hub requires both high investment value AND a large enough population
+ *   to justify full cath-lab infrastructure.  Meeting only one criterion is
+ *   insufficient — a site with a great score but only 20K residents cannot
+ *   sustain 24/7 PCI staffing; a site with 500K residents but a low score
+ *   means existing capacity nearby may be adequate.
+ *
+ * WHY tPA Spoke uses OR logic:
+ *   A tPA-capable stabilization site has a much lower operational bar.  Either
+ *   a sufficiently high investment score (indicating rescued burden is large) OR
+ *   a sufficiently large served population (indicating throughput demand) is
+ *   enough to justify a thrombolysis-capable facility.  A site meeting both
+ *   criteria would have already qualified as a PCI Hub.
+ *
+ * @param {number} invScore   0–100 investment score from augmentRankingWithScore()
+ * @param {number} popReached total population promoted out of Zone X by this site
  * @returns {DecisionClass}
  */
 export function classifySite(invScore, popReached) {
+  // PCI Hub: AND — both score and population must clear the bar
   if (invScore >= CLASS_THRESHOLDS.PCI_HUB.scoreMin && popReached >= CLASS_THRESHOLDS.PCI_HUB.popMin) {
     return CLASS_THRESHOLDS.PCI_HUB;
   }
+  // tPA Spoke: OR — either high burden value or high population demand suffices
   if (invScore >= CLASS_THRESHOLDS.TPA.scoreMin || popReached >= CLASS_THRESHOLDS.TPA.popMin) {
     return CLASS_THRESHOLDS.TPA;
   }
+  // Transfer: below both thresholds — optimize routing, do not build new capacity
   return CLASS_THRESHOLDS.TRANSFER;
 }
 
@@ -107,7 +143,11 @@ export function computePlacement(numSites = 10) {
         hCount++;
       }
 
-      const score = 2 * popZ1 + popZ2;
+      // GREEDY_W_Z1 and GREEDY_W_Z2 are defined in assumptions.js.
+      // Zone 1 (≤60-min) promotion is weighted twice Zone 2 (61-120-min)
+      // because primary PCI within 60 minutes has substantially greater
+      // clinical benefit than transfer with additional delay.
+      const score = GREEDY_W_Z1 * popZ1 + GREEDY_W_Z2 * popZ2;
       if (score > bestScore) {
         bestScore = score; bestI = i;
         bestStats = { popZ1, popZ2, hCount };
@@ -155,7 +195,7 @@ export function augmentRankingWithScore(ranking, geojson) {
     let redSum = 0, redN = 0, savedSum = 0, savedN = 0;
 
     for (const e of PLACEMENT_DATA.cov[r.idx]) {
-      const aux = HARA_AUX.get(e[0]);
+      const aux = HARA_INDEX.get(e[0]);
       const dm  = currentDM.get(e[0]);
       if (aux && aux.d2 > 0 && dm > 0) { redSum += Math.max(0, aux.d2 - dm); redN++; }
       if (dm > 0 && e[1] > 0)          { savedSum += dm - e[1]; savedN++; }
@@ -179,7 +219,15 @@ export function augmentRankingWithScore(ranking, geojson) {
     const redN  = normalizeToMax(r.redundancy, maxRed);
     const stN   = normalizeToMax(r.stemiYr,    maxSTEMI);
 
-    r.invScore     = Math.round(100 * (0.40 * popN + 0.30 * z1N + 0.15 * redN + 0.15 * stN));
+    // invScore: weighted blend of per-site components, each normalised to 0–1.
+    // Weights are policy inputs defined in assumptions.js (SCORE_WEIGHTS).
+    // This score answers "Where should we act?" — distinct from priority_score.
+    r.invScore = Math.round(100 * (
+      SCORE_WEIGHTS.pop   * popN  +
+      SCORE_WEIGHTS.z1    * z1N   +
+      SCORE_WEIGHTS.red   * redN  +
+      SCORE_WEIGHTS.stemi * stN
+    ));
     r.scoreParts   = { pop: popN, z1: z1N, red: redN, stemi: stN };
     r.classification = classifySite(r.invScore, popReached);
   }
@@ -248,19 +296,20 @@ export function clearSiteFocusOnFeatures(geojson) {
 // ── Geography helpers ─────────────────────────────────────────────────────────
 /**
  * Group rescued haras by governorate and aggregate population + tier counts.
+ * Uses HARA_INDEX directly — no haraGov argument needed.
  *
  * @param {number} siteIndex
  * @param {PlacementResult} result
  * @returns {Array<[string, { haras: number, popZ1: number, popZ2: number }]>}
  *   Sorted descending by total rescued population.
  */
-export function buildAffectedByGovernorate(siteIndex, result, haraGov) {
+export function buildAffectedByGovernorate(siteIndex, result) {
   const r      = result.ranking[siteIndex];
   const Z1_MIN = PLACEMENT_DATA.meta.z1_promo_min;
   const byGov  = new Map();
 
   for (const e of PLACEMENT_DATA.cov[r.idx]) {
-    const gov = haraGov.get(e[0]) || '—';
+    const gov = HARA_INDEX.get(e[0])?.gov ?? '—';
     if (!byGov.has(gov)) byGov.set(gov, { haras: 0, popZ1: 0, popZ2: 0 });
     const b = byGov.get(gov);
     b.haras++;
