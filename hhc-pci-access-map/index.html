@@ -70,21 +70,8 @@
           </svg>
         </button>
       </div>
-      <div class="dossier-body" id="dossier-body">
-        <div class="alert-box" id="alert-box">
-          <div class="alert-title" id="alert-title">Critical Access Gap</div>
-          <div class="alert-text" id="alert-text"></div>
-        </div>
-        <div class="stats-grid" id="stats-grid"></div>
-        <div class="zone-breakdown" id="zone-breakdown"></div>
-        <div id="hosp-section">
-          <div class="list-label" style="padding:0;margin-bottom:8px">PCI Hospitals Serving Region</div>
-          <table class="hosp-table">
-            <thead><tr><th>Hospital</th><th style="text-align:right">Coords</th></tr></thead>
-            <tbody id="hosp-table-body"></tbody>
-          </table>
-        </div>
-      </div>
+      <!-- dossier-body is fully owned by dossier.js — no static children -->
+      <div class="dossier-body" id="dossier-body" role="region" aria-label="Analytical dossier content"></div>
     </aside>
 
     <!-- Map controls -->
@@ -98,6 +85,6 @@
   </main>
 
   <!-- ─── Application modules ──────────────────────────────────── -->
-  <script type="module" src="src/app/main.js"></script>
+  <script type="module" src="src/main.js"></script>
 </body>
 </html>

@@ -6,7 +6,7 @@
  * or placement result changes.
  */
 
-import { REGIONS, HARAS_GEOJSON, HOSPITAL_COLORS, PLACEMENT_DATA } from '../data/data-index.js';
+import { REGIONS, HOSPITAL_COLORS, PLACEMENT_DATA } from '../data/data-index.js';
 import { z1Color } from '../engine/zones.js';
 import { siteShortName, shortHospName, fmtK } from '../utils/format.js';
 import { STEMI_RATE, STEMI_NOTE } from '../engine/assumptions.js';
@@ -36,12 +36,14 @@ export function buildZoneList(onRegionClick) {
 
 // ── Catchment mode ─────────────────────────────────────────────────────────────
 /**
+ * @param {GeoJSON.FeatureCollection} geojson  — working copy from state.js
  * @param {(name: string, stats: object, col: string) => void} onHospClick
  */
-export function buildCatchmentList(onHospClick) {
+export function buildCatchmentList(geojson, onHospClick) {
   setLabel('Hospitals — Catchment Size');
   const stats = {};
-  for (const f of HARAS_GEOJSON.features) {
+  // Iterate the working copy, not the raw import, so annotations are visible
+  for (const f of geojson.features) {
     const h = f.properties.Nearest_Hospital || '—';
     if (!stats[h]) stats[h] = { haras: 0, pop: 0 };
     stats[h].haras++;
@@ -66,12 +68,14 @@ export function buildCatchmentList(onHospClick) {
 
 // ── Priority mode ──────────────────────────────────────────────────────────────
 /**
+ * @param {GeoJSON.FeatureCollection} geojson  — working copy from state.js
  * @param {(regionId: string) => void} onRegionClick
  */
-export function buildPriorityList(onRegionClick) {
+export function buildPriorityList(geojson, onRegionClick) {
   setLabel('Regions — Person-Hours of Access Burden');
   const regionScores = {};
-  for (const f of HARAS_GEOJSON.features) {
+  // Use the working copy so priority_score annotations from computePriority() are present
+  for (const f of geojson.features) {
     const r = f.properties.Region || '—';
     regionScores[r] = (regionScores[r] || 0) + (f.properties.priority_score || 0);
   }

@@ -238,7 +238,7 @@ function _enterCatchment() {
   _clearPlacementMarkers();
   _setHarasFill(_catchmentFill());
   _map.getSource('haras')?.setData(_geoWork);
-  buildCatchmentList((name, stats, col) => {
+  buildCatchmentList(_geoWork, (name, stats, col) => {
     const hosp = HOSPITALS.find((h) => h.name === name);
     if (hosp) flyToHospital(_map, hosp.lng, hosp.lat);
     openCatchmentDossierForHospital(name, stats, col);
@@ -253,7 +253,7 @@ function _enterPriority() {
   computePriority(_geoWork);           // writes priority_score onto the working copy
   _map.getSource('haras')?.setData(_geoWork);
   _setHarasFill(_priorityFill());
-  buildPriorityList((regionId) => openDossier(regionId));
+  buildPriorityList(_geoWork, (regionId) => openDossier(regionId));
   renderPriorityLegend('map-legend');
 }
 

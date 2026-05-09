@@ -24,14 +24,60 @@ import { renderImpactMap }          from './impact-map-svg.js';
 import { resetCamera }              from '../map/camera.js';
 
 // ── Dossier DOM refs ──────────────────────────────────────────────────────────
+// IDs match index.html: #dossier-name, #dossier-meta, #dossier-badge, #dossier-body
 const $ = (id) => document.getElementById(id);
 
-function getDossier()    { return $('dossier');         }
-function getTitle()      { return $('dossier-title');   }
-function getSubtitle()   { return $('dossier-subtitle');}
-function getBody()       { return $('dossier-body');    }
+function getDossier() { return $('dossier');       }
+function getName()    { return $('dossier-name');  }
+function getMeta()    { return $('dossier-meta');  }
+function getBadge()   { return $('dossier-badge'); }
+function getBody()    { return $('dossier-body');  }
 
-function showDossier() {
+// ── Section factory ───────────────────────────────────────────────────────────
+/**
+ * Wrap arbitrary HTML in a labelled dossier section div.
+ * Replaces ad-hoc repetition of the same markup pattern.
+ *
+ * @param {string} label   — section heading text (shown in monospace)
+ * @param {string} content — inner HTML for the section body
+ * @returns {string}
+ */
+function section(label, content) {
+  return `
+    <div class="dossier-section">
+      <div class="dossier-section-label">${label}</div>
+      ${content}
+    </div>
+  `;
+}
+
+// ── Badge helper ──────────────────────────────────────────────────────────────
+/**
+ * Update the dossier badge chip.
+ *
+ * @param {string} text   — short badge text (2–4 chars)
+ * @param {string} color  — accent colour hex
+ */
+function setBadge(text, color) {
+  const el = getBadge();
+  if (!el) return;
+  el.textContent         = text;
+  el.style.background    = `${color}22`;
+  el.style.color         = color;
+  el.style.border        = `1px solid ${color}44`;
+}
+
+/**
+ * Set the dossier header name + meta line and open the panel.
+ *
+ * @param {string} name
+ * @param {string} meta
+ */
+function openDossierPanel(name, meta) {
+  const n = getName();
+  const m = getMeta();
+  if (n) n.textContent = name;
+  if (m) m.textContent = meta;
   const d = getDossier();
   if (d) d.classList.add('open');
 }
@@ -47,7 +93,7 @@ export function closeDossier(map = null) {
   if (map) resetCamera(map);
 }
 
-// ── Region dossier ─────────────────────────────────────────────────────────────
+// ── renderRegionDossier ───────────────────────────────────────────────────────
 /**
  * Render and open the region-level analytical dossier.
  *
@@ -64,7 +110,7 @@ export function openRegionDossier(regionId, geojson) {
   const stemiZx  = Math.round(zx.pop  * STEMI_RATE);
   const capital  = REGION_CAPITAL[region.name] || region.name;
 
-  // Count haras and sum priority score for this region
+  // Accumulate priority_score only from the working copy (never HARAS_GEOJSON)
   let totalPrioScore = 0;
   for (const f of geojson.features) {
     if (f.properties.Region === region.name) {
@@ -72,226 +118,200 @@ export function openRegionDossier(regionId, geojson) {
     }
   }
 
-  const fragSeverity = fragilitySeverity(zx.pct_pop, totalPrioScore);
+  const frag = fragilitySeverity(zx.pct_pop, totalPrioScore);
 
-  getTitle().textContent    = region.name;
-  getSubtitle().textContent = `Administrative Region · ${total.nbhd.toLocaleString()} haras`;
+  setBadge('REG', '#00e5b4');
+  openDossierPanel(
+    region.name,
+    `Administrative Region · ${total.nbhd.toLocaleString()} haras`,
+  );
 
-  getBody().innerHTML = `
-    <!-- Zone breakdown -->
-    <div class="dossier-section">
-      <div class="dossier-section-label">Access Zone Breakdown</div>
+  getBody().innerHTML = renderRegionDossier({ region, z1, z2, zx, stemiZ1, stemiZ2, stemiZx, totalPrioScore, frag, capital });
+}
+
+/**
+ * Pure render function — returns the full dossier body HTML string for a region.
+ * Separated from the DOM-mutation caller so it can be tested or reused.
+ */
+function renderRegionDossier({ region, z1, z2, zx, stemiZ1, stemiZ2, stemiZx, totalPrioScore, frag, capital }) {
+  const hospitalsSection = region.hospitals?.length
+    ? section('PCI Centers Serving This Region', `
+        <div class="dossier-hosp-list">
+          ${region.hospitals.map((h) => {
+            const col = HOSPITAL_COLORS[h] || '#0077ff';
+            return `<div class="dossier-hosp-item">
+              <span class="dossier-hosp-dot" style="background:${col}"></span>
+              <span class="dossier-hosp-name">${h}</span>
+            </div>`;
+          }).join('')}
+        </div>
+      `)
+    : '';
+
+  return `
+    ${section('Access Zone Breakdown', `
       <div class="dossier-zone-bars">
-        ${zoneBar('Zone 1 ≤60 min',   z1.pct_pop, z1.pop, z1.nbhd, '#00e5b4', stemiZ1)}
+        ${zoneBar('Zone 1 ≤60 min',    z1.pct_pop, z1.pop, z1.nbhd, '#00e5b4', stemiZ1)}
         ${zoneBar('Zone 2 61-120 min', z2.pct_pop, z2.pop, z2.nbhd, '#d4a017', stemiZ2)}
         ${zoneBar('Zone X >120 min',   zx.pct_pop, zx.pop, zx.nbhd, '#e03e3e', stemiZx)}
       </div>
-    </div>
+    `)}
 
-    <!-- Burden summary -->
-    <div class="dossier-section">
-      <div class="dossier-section-label">Access Burden</div>
+    ${section('Access Burden', `
       <div class="dossier-stat-grid">
-        <div class="dossier-stat">
-          <div class="dossier-stat-value" style="color:#e03e3e">${fmtK(zx.pop)}</div>
-          <div class="dossier-stat-label">people beyond 120 min</div>
-        </div>
-        <div class="dossier-stat">
-          <div class="dossier-stat-value" style="color:#ff6b3e">${Math.round(totalPrioScore / 1000)}K</div>
-          <div class="dossier-stat-label">person-hrs of burden</div>
-        </div>
-        <div class="dossier-stat">
-          <div class="dossier-stat-value" style="color:#e03e3e">~${stemiZx.toLocaleString()}</div>
-          <div class="dossier-stat-label">delayed STEMI/yr</div>
-        </div>
-        <div class="dossier-stat">
-          <div class="dossier-stat-value" style="color:${fragSeverity.color}">${fragSeverity.label}</div>
-          <div class="dossier-stat-label">fragility severity</div>
-        </div>
+        ${stat(fmtK(zx.pop),                           'people beyond 120 min',   '#e03e3e')}
+        ${stat(`${Math.round(totalPrioScore / 1000)}K`, 'person-hrs of burden',    '#ff6b3e')}
+        ${stat(`~${stemiZx.toLocaleString()}`,          'delayed STEMI/yr',         '#e03e3e')}
+        ${stat(frag.label,                              'fragility severity',       frag.color)}
       </div>
-    </div>
+    `)}
 
-    <!-- Narrative -->
-    <div class="dossier-section">
-      <div class="dossier-section-label">System Dependency</div>
+    ${section('System Dependency', `
       <div class="dossier-narrative">
         ${zx.pct_pop >= 0.3
-          ? `<strong style="color:#e03e3e">${fmtPct(zx.pct_pop)}</strong> of ${region.name}'s population
+          ? `<strong style="color:#e03e3e">${fmtPct(zx.pct_pop)}</strong> of ${region.name}&apos;s population
              (${fmtK(zx.pop)} people) live beyond 120-min drive time of any PCI-capable center.
              This cohort relies on <em>transfer chains</em> from ${capital}, with typical delays
-             exceeding 3 hours — well beyond the 90-min door-to-balloon target.`
-          : `<strong style="color:#00e5b4">${fmtPct(z1.pct_pop)}</strong> of ${region.name}'s population
+             exceeding 3 hours &mdash; well beyond the 90-min door-to-balloon target.`
+          : `<strong style="color:#00e5b4">${fmtPct(z1.pct_pop)}</strong> of ${region.name}&apos;s population
              has optimal PCI access (&le;60 min). The remaining ${fmtPct(zx.pct_pop)} in Zone X
-             — ${fmtK(zx.pop)} people — still depend on extended transfers.`
+             &mdash; ${fmtK(zx.pop)} people &mdash; still depend on extended transfers.`
         }
       </div>
-    </div>
+    `)}
 
-    <!-- PCI hospitals -->
-    ${region.hospitals && region.hospitals.length
-      ? `<div class="dossier-section">
-          <div class="dossier-section-label">PCI Centers Serving This Region</div>
-          <div class="dossier-hosp-list">
-            ${region.hospitals.map((h) => {
-              const col = HOSPITAL_COLORS[h] || '#0077ff';
-              return `<div class="dossier-hosp-item">
-                <span class="dossier-hosp-dot" style="background:${col}"></span>
-                <span class="dossier-hosp-name">${h}</span>
-              </div>`;
-            }).join('')}
-          </div>
-         </div>`
-      : ''}
-
+    ${hospitalsSection}
     <div class="dossier-assumption">${STEMI_NOTE}</div>
   `;
-
-  showDossier();
 }
 
-// ── Catchment dossier ──────────────────────────────────────────────────────────
+// ── renderCatchmentDossier ────────────────────────────────────────────────────
 /**
  * Render and open the catchment dossier for a hospital.
  *
  * @param {string} hospName
- * @param {{ haras: number, pop: number }} basicStats  from the list panel click
+ * @param {{ haras: number, pop: number }} basicStats  from state.computeHospitalStats()
  * @param {string} color
- * @param {GeoJSON.FeatureCollection} [geojson]
+ * @param {GeoJSON.FeatureCollection} geojson  — working copy passed by state.js
  */
 export function openCatchmentDossier(hospName, basicStats, color, geojson) {
   const full = getCatchmentForHospital(geojson, hospName);
   const s    = full ?? { haras: basicStats.haras, pop: basicStats.pop, z1: { h: 0, p: 0 }, z2: { h: 0, p: 0 }, zx: { h: 0, p: 0 } };
 
+  setBadge('PCI', color);
+  openDossierPanel(
+    hospName,
+    `PCI-capable center · ${s.haras.toLocaleString()} haras in catchment`,
+  );
+  getBody().innerHTML = renderCatchmentDossier({ s, hospName, color });
+}
+
+/**
+ * Pure render function — returns the full dossier body HTML string for a catchment.
+ */
+function renderCatchmentDossier({ s, hospName, color }) {
   const stemiZx = Math.round((s.zx?.p ?? 0) * STEMI_RATE);
 
-  getTitle().textContent    = hospName;
-  getSubtitle().textContent = `PCI-capable center · ${s.haras.toLocaleString()} haras in catchment`;
-
-  getBody().innerHTML = `
-    <!-- Catchment zone breakdown -->
-    <div class="dossier-section">
-      <div class="dossier-section-label">Catchment Zone Breakdown</div>
+  return `
+    ${section('Catchment Zone Breakdown', `
       <div class="dossier-zone-bars">
-        ${catchmentZoneBar('Zone 1 ≤60 min',    s.z1.h, s.haras, s.z1.p, '#00e5b4')}
-        ${catchmentZoneBar('Zone 2 61-120 min',  s.z2.h, s.haras, s.z2.p, '#d4a017')}
-        ${catchmentZoneBar('Zone X >120 min',    s.zx.h, s.haras, s.zx.p, '#e03e3e')}
+        ${catchmentZoneBar('Zone 1 ≤60 min',   s.z1.h, s.haras, s.z1.p, '#00e5b4')}
+        ${catchmentZoneBar('Zone 2 61-120 min', s.z2.h, s.haras, s.z2.p, '#d4a017')}
+        ${catchmentZoneBar('Zone X >120 min',   s.zx.h, s.haras, s.zx.p, '#e03e3e')}
       </div>
-    </div>
+    `)}
 
-    <!-- Key metrics -->
-    <div class="dossier-section">
-      <div class="dossier-section-label">Catchment Metrics</div>
+    ${section('Catchment Metrics', `
       <div class="dossier-stat-grid">
-        <div class="dossier-stat">
-          <div class="dossier-stat-value" style="color:${color}">${fmtK(s.pop)}</div>
-          <div class="dossier-stat-label">total catchment pop</div>
-        </div>
-        <div class="dossier-stat">
-          <div class="dossier-stat-value" style="color:#e03e3e">${fmtK(s.zx?.p ?? 0)}</div>
-          <div class="dossier-stat-label">Zone X population</div>
-        </div>
-        <div class="dossier-stat">
-          <div class="dossier-stat-value" style="color:#e03e3e">~${stemiZx.toLocaleString()}</div>
-          <div class="dossier-stat-label">delayed STEMI/yr</div>
-        </div>
-        <div class="dossier-stat">
-          <div class="dossier-stat-value" style="color:${color}">${s.z1.h.toLocaleString()}</div>
-          <div class="dossier-stat-label">haras in 60-min zone</div>
-        </div>
+        ${stat(fmtK(s.pop),                   'total catchment pop',    color)}
+        ${stat(fmtK(s.zx?.p ?? 0),            'Zone X population',      '#e03e3e')}
+        ${stat(`~${stemiZx.toLocaleString()}`, 'delayed STEMI/yr',       '#e03e3e')}
+        ${stat(s.z1.h.toLocaleString(),        'haras in 60-min zone',   color)}
       </div>
-    </div>
+    `)}
 
-    <!-- Narrative -->
-    <div class="dossier-section">
-      <div class="dossier-section-label">Coverage Narrative</div>
+    ${section('Coverage Narrative', `
       <div class="dossier-narrative">
         ${hospName} serves <strong>${s.haras.toLocaleString()} haras</strong>
         with a total catchment population of <strong>${fmtK(s.pop)}</strong>.
         ${s.zx.h > 0
           ? `However, <strong style="color:#e03e3e">${s.zx.h.toLocaleString()} haras</strong>
-             (${fmtK(s.zx.p)} people) fall in Zone X — over 120 min drive-time —
+             (${fmtK(s.zx.p)} people) fall in Zone X &mdash; over 120 min drive-time &mdash;
              indicating a structural access gap that cannot be resolved by optimizing
              existing routing alone.`
           : `All catchment haras fall within 120 minutes, representing strong spatial coverage.`
         }
       </div>
-    </div>
+    `)}
 
     <div class="dossier-assumption">${STEMI_NOTE}</div>
   `;
-
-  showDossier();
 }
 
-// ── Placement site dossier ─────────────────────────────────────────────────────
+// ── renderSiteDossier ─────────────────────────────────────────────────────────
 /**
  * Render and open the dossier for a proposed placement site.
- * Governorate lookup uses HARA_INDEX internally — no GeoJSON needed here.
+ * Governorate lookup uses HARA_INDEX internally via buildAffectedByGovernorate.
  *
  * @param {import('../engine/placement-engine.js').PlacementResult} result
  * @param {number} siteIndex  0-indexed rank in result.ranking
  */
 export function openSiteDossier(result, siteIndex) {
-  const r    = result.ranking[siteIndex];
-  const cls  = r.classification;
-  const site = r.site;
-  const name = siteShortName(site);
+  const r       = result.ranking[siteIndex];
+  const cls     = r.classification;
+  const site    = r.site;
+  const name    = siteShortName(site);
+  const govData = buildAffectedByGovernorate(siteIndex, result);
 
+  setBadge(`#${siteIndex + 1}`, cls.color);
+  openDossierPanel(name, facilityTypeText(cls));
+  getBody().innerHTML = renderSiteDossier({ r, cls, govData });
+
+  // renderImpactMap must run after innerHTML sets the #dossier-impact-map node
+  renderImpactMap(
+    document.getElementById('dossier-impact-map'),
+    govData,
+    { n: site.n, lat: site.lat, lng: site.lng },
+  );
+}
+
+/**
+ * Pure render function — returns full dossier body HTML for a placement site.
+ * The #dossier-impact-map div is left empty here; renderImpactMap fills it
+ * after this string is injected into the DOM.
+ */
+function renderSiteDossier({ r, cls, govData }) {
   const popReached = r.popZ1 + r.popZ2;
   const stemiYr    = Math.round(popReached * STEMI_RATE);
-  const govData    = buildAffectedByGovernorate(siteIndex, result);
-  const typeText   = facilityTypeText(cls);
 
-  getTitle().textContent    = name;
-  getSubtitle().textContent = typeText;
-
-  getBody().innerHTML = `
-    <!-- Classification badge -->
-    <div class="dossier-section">
-      <div style="display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:5px;background:${cls.color}18;border:1px solid ${cls.color}55">
-        <span style="width:8px;height:8px;border-radius:50%;background:${cls.color}"></span>
-        <span style="font-family:'Space Mono',monospace;font-size:10px;color:${cls.color};letter-spacing:0.1em">${cls.label}</span>
-        <span style="font-size:9px;color:var(--muted)">inv. score ${r.invScore}/100</span>
+  return `
+    ${section('Classification', `
+      <div class="dossier-cls-badge" style="background:${cls.color}18;border:1px solid ${cls.color}55">
+        <span class="dossier-cls-dot" style="background:${cls.color}"></span>
+        <span class="dossier-cls-label" style="color:${cls.color}">${cls.label}</span>
+        <span class="dossier-cls-score">inv. score ${r.invScore}/100</span>
       </div>
-    </div>
+    `)}
 
-    <!-- Population impact -->
-    <div class="dossier-section">
-      <div class="dossier-section-label">Population Impact</div>
+    ${section('Population Impact', `
       <div class="dossier-stat-grid">
-        <div class="dossier-stat">
-          <div class="dossier-stat-value" style="color:#00e5b4">${fmtK(r.popZ1)}</div>
-          <div class="dossier-stat-label">gain ≤60-min access</div>
-        </div>
-        <div class="dossier-stat">
-          <div class="dossier-stat-value" style="color:#d4a017">${fmtK(r.popZ2)}</div>
-          <div class="dossier-stat-label">gain 60-120-min access</div>
-        </div>
-        <div class="dossier-stat">
-          <div class="dossier-stat-value" style="color:#9d4edd">${fmtK(popReached)}</div>
-          <div class="dossier-stat-label">total population rescued</div>
-        </div>
-        <div class="dossier-stat">
-          <div class="dossier-stat-value" style="color:#00e5b4">~${stemiYr.toLocaleString()}</div>
-          <div class="dossier-stat-label">STEMI/yr gaining timely care</div>
-        </div>
+        ${stat(fmtK(r.popZ1),               'gain &le;60-min access',      '#00e5b4')}
+        ${stat(fmtK(r.popZ2),               'gain 60-120-min access',      '#d4a017')}
+        ${stat(fmtK(popReached),             'total population rescued',    '#9d4edd')}
+        ${stat(`~${stemiYr.toLocaleString()}`, 'STEMI/yr gaining timely care', '#00e5b4')}
       </div>
-    </div>
+    `)}
 
-    <!-- Score breakdown -->
-    <div class="dossier-section">
-      <div class="dossier-section-label">Intervention Score Breakdown</div>
+    ${section('Intervention Score Breakdown', `
       <div class="dossier-score-bars">
-        ${scorePart('Pop coverage',   r.scoreParts.pop,   0.40, '#9d4edd')}
-        ${scorePart('≤60-min gain',   r.scoreParts.z1,    0.30, '#00e5b4')}
-        ${scorePart('Redundancy red.',r.scoreParts.red,   0.15, '#d4a017')}
-        ${scorePart('STEMI volume',   r.scoreParts.stemi, 0.15, '#ff8c42')}
+        ${scorePart('Pop coverage',    r.scoreParts.pop,   0.40, '#9d4edd')}
+        ${scorePart('&le;60-min gain', r.scoreParts.z1,    0.30, '#00e5b4')}
+        ${scorePart('Redundancy red.', r.scoreParts.red,   0.15, '#d4a017')}
+        ${scorePart('STEMI volume',    r.scoreParts.stemi, 0.15, '#ff8c42')}
       </div>
-    </div>
+    `)}
 
-    <!-- Affected governorates -->
-    <div class="dossier-section">
-      <div class="dossier-section-label">Affected Governorates (top 6)</div>
+    ${section('Affected Governorates (top 6)', `
       <div class="dossier-gov-list">
         ${govData.slice(0, 6).map(([gov, v]) => {
           const tot = v.popZ1 + v.popZ2;
@@ -303,28 +323,35 @@ export function openSiteDossier(result, siteIndex) {
           </div>`;
         }).join('')}
       </div>
-    </div>
+    `)}
 
-    <!-- System impact map -->
-    <div class="dossier-section">
-      <div class="dossier-section-label">System Impact Map</div>
+    ${section('System Impact Map', `
       <div id="dossier-impact-map" style="margin-top:6px"></div>
-    </div>
+    `)}
 
     <div class="dossier-assumption">${STEMI_NOTE}</div>
   `;
-
-  // Render the SVG impact map after innerHTML is set
-  renderImpactMap(
-    '#dossier-impact-map',
-    govData,
-    { n: site.n, lat: site.lat, lng: site.lng },
-  );
-
-  showDossier();
 }
 
 // ── Private helpers ────────────────────────────────────────────────────────────
+/**
+ * Render a single stat card (value + label).
+ * Used inside .dossier-stat-grid containers.
+ *
+ * @param {string} value   — formatted number string (already human-readable)
+ * @param {string} label   — short descriptor text
+ * @param {string} color   — accent hex colour for the value
+ * @returns {string}
+ */
+function stat(value, label, color) {
+  return `
+    <div class="dossier-stat">
+      <div class="dossier-stat-value" style="color:${color}">${value}</div>
+      <div class="dossier-stat-label">${label}</div>
+    </div>
+  `;
+}
+
 /**
  * Render a zone bar row with label, % bar, and supplementary stats.
  */
