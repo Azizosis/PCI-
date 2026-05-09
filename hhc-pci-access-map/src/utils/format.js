@@ -75,8 +75,8 @@ const SITE_LABELS = {
     secondary: 'Wadi Ad Dawasir, Riyadh Region',
   },
   'Cluster-4 (snap → Qaswan)': {
-    primary:   'Al Qatif Central Hospital — Eastern Province',
-    secondary: 'Qaryah Al Ulya, Eastern Province',
+    primary:   'Al Khafji General Hospital — Northern Eastern Province',
+    secondary: 'Al Khafji / Qaryah Al Ulya, Eastern Province',
   },
   'Al Wadiah': {
     primary:   'Sharurah General Hospital',
