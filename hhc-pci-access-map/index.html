@@ -74,6 +74,13 @@
       <div class="dossier-body" id="dossier-body" role="region" aria-label="Analytical dossier content"></div>
     </aside>
 
+    <!-- Loading / error overlay -->
+    <div id="load-overlay" role="status" aria-live="polite" aria-label="Loading application data">
+      <div class="load-spinner" aria-hidden="true"></div>
+      <div class="load-text" id="load-text">Loading neighborhood data…</div>
+      <div class="load-sub" id="load-sub">Fetching 23,360 boundaries from CDN</div>
+    </div>
+
     <!-- Map controls -->
     <div class="zoom-controls" id="zoom-controls">
       <button class="zoom-btn" id="btn-zoom-in" aria-label="Zoom in">+</button>

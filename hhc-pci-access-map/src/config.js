@@ -24,8 +24,15 @@ export const MAP_MAX_ZOOM = 14;
 
 // ── Placement engine ──────────────────────────────────────────────────────────
 
-/** How many candidate sites the greedy placement algorithm evaluates. */
+/** How many candidate sites the greedy placement algorithm evaluates (internal pool). */
 export const PLACEMENT_NUM_SITES = 10;
+
+/**
+ * How many ranked sites are shown by default in the placement panel and on the map.
+ * The full PLACEMENT_NUM_SITES pool is always computed internally; this constant
+ * controls only the visible presentation for executive use.
+ */
+export const DEFAULT_VISIBLE_PLACEMENTS = 5;
 
 // ── Layer defaults ────────────────────────────────────────────────────────────
 

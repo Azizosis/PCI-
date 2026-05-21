@@ -176,19 +176,16 @@ export function computePlacement(numSites = 10) {
  * Add invScore, scoreParts, redundancy, avgSaved, stemiYr, and classification
  * to each ranked site in-place.
  *
+ * Redundancy is now computed directly from HARA_INDEX pre-computed values:
+ *   redundancy_gap = aux.d2 − aux.dist
+ * where aux.d2 = second-nearest PCI travel time and aux.dist = nearest PCI
+ * travel time. A large gap means the area depends heavily on a single facility.
+ * The geojson/currentDM path was dead code (geojson was never passed) and is
+ * removed. avgSaved uses aux.dist as the current nearest PCI drive time.
+ *
  * @param {RankedSite[]} ranking  — mutated in place
- * @param {GeoJSON.FeatureCollection} geojson  — used for drive-time lookup
  */
-export function augmentRankingWithScore(ranking, geojson) {
-  // Build HARA_ID → currentDriveMin lookup from GeoJSON features
-  const currentDM = new Map();
-  if (geojson) {
-    for (const f of geojson.features) {
-      const dm = parseFloat(f.properties.Driving_Min);
-      if (dm > 0) currentDM.set(+f.properties.HARA_ID, dm);
-    }
-  }
-
+export function augmentRankingWithScore(ranking) {
   // Raw component values per site
   for (const r of ranking) {
     const popReached = r.popZ1 + r.popZ2;
@@ -196,13 +193,21 @@ export function augmentRankingWithScore(ranking, geojson) {
 
     for (const e of PLACEMENT_DATA.cov[r.idx]) {
       const aux = HARA_INDEX.get(e[0]);
-      const dm  = currentDM.get(e[0]);
-      if (aux && aux.d2 > 0 && dm > 0) { redSum += Math.max(0, aux.d2 - dm); redN++; }
-      if (dm > 0 && e[1] > 0)          { savedSum += dm - e[1]; savedN++; }
+      // redundancy_gap: how much worse is the backup option vs the nearest hospital?
+      // Both values come from HARA_AUX pre-computation — no GeoJSON needed.
+      if (aux && aux.d2 > 0 && aux.dist > 0) {
+        redSum += Math.max(0, aux.d2 - aux.dist);
+        redN++;
+      }
+      // avgSaved: how many minutes does this new site save vs the current nearest PCI?
+      if (aux && aux.dist > 0 && e[1] > 0) {
+        savedSum += Math.max(0, aux.dist - e[1]);
+        savedN++;
+      }
     }
 
-    r.redundancy = redN    > 0 ? redSum   / redN    : 0;
-    r.avgSaved   = savedN  > 0 ? savedSum / savedN  : 0;
+    r.redundancy = redN   > 0 ? redSum   / redN   : 0;
+    r.avgSaved   = savedN > 0 ? savedSum / savedN : 0;
     r.stemiYr    = popReached * STEMI_RATE;
   }
 

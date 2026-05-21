@@ -19,7 +19,7 @@ import {
   buildAffectedByGovernorate,
   facilityTypeText,
 } from '../engine/placement-engine.js';
-import { fmtK, fmtPct, siteShortName } from '../utils/format.js';
+import { fmtK, fmtPct, siteShortName, siteDisplayLabel } from '../utils/format.js';
 import { renderImpactMap }          from './impact-map-svg.js';
 import { resetCamera }              from '../map/camera.js';
 
@@ -284,11 +284,11 @@ export function openSiteDossier(result, siteIndex) {
   const r       = result.ranking[siteIndex];
   const cls     = r.classification;
   const site    = r.site;
-  const name    = siteShortName(site);
+  const lbl     = siteDisplayLabel(site);
   const govData = buildAffectedByGovernorate(siteIndex, result);
 
   setBadge(`#${siteIndex + 1}`, cls.color);
-  openDossierPanel(name, facilityTypeText(cls));
+  openDossierPanel(lbl.primary, facilityTypeText(cls));
   getBody().innerHTML = renderSiteDossier({ r, cls, govData });
 
   // renderImpactMap must run after innerHTML sets the #dossier-impact-map node
